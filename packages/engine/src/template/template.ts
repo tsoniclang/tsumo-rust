@@ -1,4 +1,4 @@
-import { StringBuilder } from "@tsonic/dotnet/System.Text.js";
+import { TextBuilder } from "../utils/text-builder.js";
 import { PageContext } from "../models.js";
 import { PageValue } from "./values.js";
 import { RenderScope } from "./scope.js";
@@ -16,15 +16,15 @@ export class Template {
   }
 
   render(root: PageContext, env: TemplateEnvironment, overrides?: Map<string, TemplateNode[]>): string {
-    const sb = new StringBuilder();
+    const sb = new TextBuilder();
     const pageValue = new PageValue(root);
     const scope = new RenderScope(pageValue, pageValue, root.site, env, undefined);
     const defs = overrides ?? new Map<string, TemplateNode[]>();
     this.renderInto(sb, scope, env, defs);
-    return sb.ToString();
+    return sb.toString();
   }
 
-  renderInto(sb: StringBuilder, scope: RenderScope, env: TemplateEnvironment, overrides: Map<string, TemplateNode[]>): void {
+  renderInto(sb: TextBuilder, scope: RenderScope, env: TemplateEnvironment, overrides: Map<string, TemplateNode[]>): void {
     renderTemplateNodes(this.nodes, sb, scope, env, overrides, this.defines);
   }
 }

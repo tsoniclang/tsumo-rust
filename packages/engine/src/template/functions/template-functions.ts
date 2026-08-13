@@ -1,14 +1,12 @@
-import { Console } from "@tsonic/dotnet/System.js";
-import { WebUtility } from "@tsonic/dotnet/System.Net.js";
 import { createTsumoError } from "../../diagnostics.js";
-import { HtmlString, escapeHtml } from "../../utils/html.js";
+import { HtmlString, decodeHtml, escapeHtml } from "../../utils/html.js";
 import { replaceText, substringFrom } from "../../utils/strings.js";
 import {
   BoolValue, HtmlValue, StringValue, TemplateValue,
 } from "../values.js";
 import { TemplateReturnSignal } from "../evaluation/return-signal.js";
 import { toTitleCase } from "../evaluation/page-semantics.js";
-import { convertGoDateLayoutToDotNet, parseDateTime } from "../evaluation/scalar-semantics.js";
+import { formatDateTime } from "../evaluation/scalar-semantics.js";
 import { trimEndCharacter } from "../evaluation/serialization.js";
 import { nil, toPlainString } from "../runtime-helpers.js";
 import { TemplateFunctionContext } from "./function-context.js";
@@ -79,7 +77,7 @@ export const callTemplateFunctionFamily = (
       message = message.replaceAll("%v", toPlainString(args[i]!));
       message = message.replaceAll("%d", toPlainString(args[i]!));
     }
-    Console.Error.WriteLine("WARN: {0}", message);
+    console.warn(`WARN: ${message}`);
     return nil;
   }
 
@@ -117,16 +115,13 @@ export const callTemplateFunctionFamily = (
 
   if (name === "htmlunescape" && args.length >= 1) {
     const v = args[0]!;
-    return new StringValue(WebUtility.HtmlDecode(toPlainString(v)) ?? "");
+    return new StringValue(decodeHtml(toPlainString(v)));
   }
 
   if (name === "time.format" && args.length >= 2) {
     const layout = toPlainString(args[0]!);
     const input = toPlainString(args[1]!);
-    const parsed = parseDateTime(input);
-    if (parsed === undefined) return new StringValue("");
-    const fmt = convertGoDateLayoutToDotNet(layout);
-    return new StringValue(parsed.ToString(fmt));
+    return new StringValue(formatDateTime(input, layout) ?? "");
   }
 
   if (name === "path.base" && args.length >= 1) {

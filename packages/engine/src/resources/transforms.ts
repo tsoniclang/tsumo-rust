@@ -1,7 +1,7 @@
 import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
-import { StringBuilder } from "@tsonic/dotnet/System.Text.js";
 import { replaceLineEndings, substringCount } from "../utils/strings.js";
+import { TextBuilder } from "../utils/text-builder.js";
 import { resourceMediaTypeForExtension } from "./media-types.js";
 import { Resource, ResourceData } from "./models.js";
 import {
@@ -12,24 +12,24 @@ import {
 
 export const concatenateResources = (targetPath: string, resources: Resource[]): Resource => {
   const target = normalizeResourceRelativePath(targetPath);
-  const identity = new StringBuilder();
-  identity.Append("concat:");
-  identity.Append(target);
-  const text = new StringBuilder();
+  const identity = new TextBuilder();
+  identity.append("concat:");
+  identity.append(target);
+  const text = new TextBuilder();
   for (let index = 0; index < resources.length; index++) {
     const resource = resources[index]!;
-    identity.Append("|" + resource.id);
+    identity.append("|" + resource.id);
     if (resource.text !== undefined) {
-      if (text.Length > 0) text.Append("\n");
-      text.Append(resource.text);
+      if (text.length > 0) text.append("\n");
+      text.append(resource.text);
     }
   }
 
-  const content = text.ToString();
+  const content = text.toString();
   const path = splitResourcePath(target);
   const file = splitResourceFileName(path.fileName);
   return new Resource(
-    identity.ToString(),
+    identity.toString(),
     undefined,
     true,
     target,
@@ -73,14 +73,14 @@ export const minifyResource = (resource: Resource): Resource => {
   }
 
   const lines = replaceLineEndings(resourceText, "\n").split("\n");
-  const output = new StringBuilder();
+  const output = new TextBuilder();
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index]!.trim();
     if (line === "") continue;
-    if (output.Length > 0) output.Append("\n");
-    output.Append(line);
+    if (output.length > 0) output.append("\n");
+    output.append(line);
   }
-  const text = output.ToString();
+  const text = output.toString();
   return new Resource(
     identity,
     resource.sourcePath,

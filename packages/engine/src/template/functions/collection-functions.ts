@@ -1,4 +1,4 @@
-import { StringBuilder } from "@tsonic/dotnet/System.Text.js";
+import { TextBuilder } from "../../utils/text-builder.js";
 import type { int32 as int } from "@tsonic/core/types.js";
 import { PageContext } from "../../models.js";
 import { substringCount, substringFrom } from "../../utils/strings.js";
@@ -208,7 +208,7 @@ export const callCollectionFunction = (
     const v = args[0]!;
     const s = toPlainString(v);
     // Deterministic markup stripping for Tsumo's plainify subset.
-    const sb = new StringBuilder();
+    const sb = new TextBuilder();
     let inTag = false;
     for (let i = 0; i < s.length; i++) {
       const ch = substringCount(s, i, 1);
@@ -220,9 +220,9 @@ export const callCollectionFunction = (
         inTag = false;
         continue;
       }
-      if (!inTag) sb.Append(ch);
+      if (!inTag) sb.append(ch);
     }
-    return new StringValue(sb.ToString());
+    return new StringValue(sb.toString());
   }
 
   if (name === "cond" && args.length >= 3) {

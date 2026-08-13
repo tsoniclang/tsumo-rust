@@ -1,4 +1,4 @@
-import { Path } from "@tsonic/dotnet/System.IO.js";
+import { dirname } from "node:path";
 import { configureSiteMenus } from "./menu-resolution.js";
 import { ContentInventory, ContentPageSource, ListPageSource } from "./content-model.js";
 import { createTsumoError } from "../diagnostics.js";
@@ -300,8 +300,8 @@ export const createStandardPageGraph = (
   for (let index = 0; index < inventory.pages.length; index++) {
     const source = inventory.pages[index]!;
     if (!source.leafBundle) continue;
-    const sourceDirectory = Path.GetDirectoryName(source.sourcePath);
-    if (sourceDirectory !== undefined && sourceDirectory !== "") {
+    const sourceDirectory = dirname(source.sourcePath);
+    if (sourceDirectory !== "") {
       bundleSourceByPage.set(contentPages[index]!, sourceDirectory);
     }
   }

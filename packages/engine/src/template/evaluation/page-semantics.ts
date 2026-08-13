@@ -1,28 +1,27 @@
-import { StringBuilder } from "@tsonic/dotnet/System.Text.js";
+import { TextBuilder } from "../../utils/text-builder.js";
 import type { int32 as int } from "@tsonic/core/types.js";
 import { PageContext } from "../../models.js";
 import { compareText, substringCount, substringFrom } from "../../utils/strings.js";
 import { toPlainString } from "../runtime-helpers.js";
 import { AnyArrayValue, DictValue, NumberValue, PageArrayValue, PageValue, StringArrayValue, StringValue, TemplateValue, VersionStringValue } from "../values.js";
 import type { RenderScope } from "../scope.js";
-import { parseDateTime } from "./scalar-semantics.js";
 import { createTsumoError } from "../../diagnostics.js";
 
 export const toTitleCase = (text: string): string => {
   const trimmed = text.trim();
   if (trimmed === "") return "";
   const parts = trimmed.split(" ");
-  const sb = new StringBuilder();
+  const sb = new TextBuilder();
   for (let i = 0; i < parts.length; i++) {
     const word = parts[i]!;
     if (word.trim() === "") continue;
-    if (sb.Length > 0) sb.Append(" ");
+    if (sb.length > 0) sb.append(" ");
     const first = substringCount(word, 0, 1).toUpperCase();
     const rest = word.length > 1 ? substringFrom(word, 1).toLowerCase() : "";
-    sb.Append(first);
-    sb.Append(rest);
+    sb.append(first);
+    sb.append(rest);
   }
-  return sb.ToString();
+  return sb.toString();
 };
 
 export const toPages = (value: TemplateValue): PageContext[] => {

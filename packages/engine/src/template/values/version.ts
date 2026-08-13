@@ -1,7 +1,7 @@
 import type { int32 as int } from "@tsonic/core/types.js";
-import { Int32 } from "@tsonic/dotnet/System.js";
 import { TemplateValue } from "./base.js";
 import { compareText, substringCount, substringFrom } from "../../utils/strings.js";
+import { parseInt32 } from "../../utils/int32.js";
 
 /**
  * Represents a version string with semver comparison semantics.
@@ -66,6 +66,6 @@ export class VersionStringValue extends TemplateValue {
       }
     }
     if (numStr === "") return 0;
-    return Int32.Parse(numStr);
+    return parseInt32(numStr) ?? 0;
   }
 }

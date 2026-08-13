@@ -1,4 +1,4 @@
-import { Path } from "@tsonic/dotnet/System.IO.js";
+import { basename, extname } from "node:path";
 import { listFilesTopDirectory, readTextFile } from "./fs.js";
 import { indexOfText, replaceLineEndings, substringCount, substringFrom } from "./utils/strings.js";
 
@@ -13,10 +13,11 @@ export class I18nStore {
     const files = listFilesTopDirectory(dir, "*");
     for (let i = 0; i < files.length; i++) {
       const file = files[i]!;
-      const ext = (Path.GetExtension(file) ?? "").toLowerCase();
+      const ext = extname(file).toLowerCase();
       if (ext !== ".yaml" && ext !== ".yml" && ext !== ".toml" && ext !== ".json") continue;
 
-      const fileName = Path.GetFileNameWithoutExtension(file) ?? "";
+      const fullFileName = basename(file);
+      const fileName = fullFileName.slice(0, fullFileName.length - ext.length);
       if (fileName === "") continue;
 
       const lang = fileName.toLowerCase();

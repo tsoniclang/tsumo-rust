@@ -1,0 +1,11 @@
+[package]
+name = "tsumo-platform"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+image = { version = "0.25.10", default-features = false, features = ["gif", "jpeg", "png", "webp"] }
+pulldown-cmark = "0.13.0"

@@ -1,8 +1,8 @@
 import { writeFileSync } from "node:fs";
-import { Directory, File, Path } from "@tsonic/dotnet/System.IO.js";
+import { dirname, extname, join, relative } from "node:path";
 import type { int32 as int } from "@tsonic/core/types.js";
 import { createTsumoError } from "../diagnostics.js";
-import { listFilesRecursive, readBinaryFile } from "../fs.js";
+import { ensureDir, fileExists, listFilesRecursive, readBinaryFile } from "../fs.js";
 import { compareText } from "../utils/strings.js";
 import { parseImageDimensions } from "./image-dimensions.js";
 import { resizeImageResource } from "./image-provider.js";
@@ -72,8 +72,8 @@ export class ResourceManager {
     this.siteDir = siteDir;
     this.themeDir = themeDir;
     this.outputDir = outputDir;
-    this.siteAssetsDir = Path.Combine(siteDir, "assets");
-    this.themeAssetsDir = themeDir === undefined ? undefined : Path.Combine(themeDir, "assets");
+    this.siteAssetsDir = join(siteDir, "assets");
+    this.themeAssetsDir = themeDir === undefined ? undefined : join(themeDir, "assets");
     this.cache = new Map<string, Resource>();
     this.siteAssetFiles = listFilesRecursive(this.siteAssetsDir, "*");
     sortResourcePaths(this.siteAssetFiles);
@@ -86,12 +86,12 @@ export class ResourceManager {
     const normalized = normalizeResourceRelativePath(relativePath);
     if (normalized === "") return undefined;
     const sitePath = resolveContainedResourcePath(this.siteAssetsDir, normalized);
-    if (File.Exists(sitePath)) return sitePath;
+    if (fileExists(sitePath)) return sitePath;
 
     const themeAssetsDir = this.themeAssetsDir;
     if (themeAssetsDir === undefined) return undefined;
     const themePath = resolveContainedResourcePath(themeAssetsDir, normalized);
-    return File.Exists(themePath) ? themePath : undefined;
+    return fileExists(themePath) ? themePath : undefined;
   }
 
   get(relativePath: string): Resource | undefined {
@@ -104,7 +104,7 @@ export class ResourceManager {
     const fullPath = this.resolveAssetFullPath(normalized);
     if (fullPath === undefined) return undefined;
     const bytes = readBinaryFile(fullPath);
-    const extension = (Path.GetExtension(fullPath) ?? "").toLowerCase();
+    const extension = extname(fullPath).toLowerCase();
     const mediaType = resourceMediaTypeForExtension(extension);
     const text = isTextResourceMediaType(mediaType) ? bytes.toString("utf8") : undefined;
     let width: int = 0;
@@ -140,14 +140,14 @@ export class ResourceManager {
 
     for (let index = 0; index < this.siteAssetFiles.length; index++) {
       const fullPath = this.siteAssetFiles[index]!;
-      const relativePath = normalizeResourceSlashes(Path.GetRelativePath(this.siteAssetsDir, fullPath));
+      const relativePath = normalizeResourceSlashes(relative(this.siteAssetsDir, fullPath));
       if (resourceGlobMatches(normalized, relativePath)) return this.get(relativePath);
     }
     const themeAssetsDir = this.themeAssetsDir;
     if (themeAssetsDir !== undefined) {
       for (let index = 0; index < this.themeAssetFiles.length; index++) {
         const fullPath = this.themeAssetFiles[index]!;
-        const relativePath = normalizeResourceSlashes(Path.GetRelativePath(themeAssetsDir, fullPath));
+        const relativePath = normalizeResourceSlashes(relative(themeAssetsDir, fullPath));
         if (resourceGlobMatches(normalized, relativePath)) return this.get(relativePath);
       }
     }
@@ -162,7 +162,7 @@ export class ResourceManager {
 
     for (let index = 0; index < this.siteAssetFiles.length; index++) {
       const fullPath = this.siteAssetFiles[index]!;
-      const relativePath = normalizeResourceSlashes(Path.GetRelativePath(this.siteAssetsDir, fullPath));
+      const relativePath = normalizeResourceSlashes(relative(this.siteAssetsDir, fullPath));
       if (!resourceGlobMatches(normalized, relativePath)) continue;
       const resource = this.get(relativePath);
       if (resource === undefined) continue;
@@ -174,7 +174,7 @@ export class ResourceManager {
     if (themeAssetsDir !== undefined) {
       for (let index = 0; index < this.themeAssetFiles.length; index++) {
         const fullPath = this.themeAssetFiles[index]!;
-        const relativePath = normalizeResourceSlashes(Path.GetRelativePath(themeAssetsDir, fullPath));
+        const relativePath = normalizeResourceSlashes(relative(themeAssetsDir, fullPath));
         if (selected.has(relativePath) || !resourceGlobMatches(normalized, relativePath)) continue;
         const resource = this.get(relativePath);
         if (resource !== undefined) result.push(resource);
@@ -189,7 +189,7 @@ export class ResourceManager {
     const selected = new Map<string, boolean>();
     for (let index = 0; index < this.siteAssetFiles.length; index++) {
       const fullPath = this.siteAssetFiles[index]!;
-      const relativePath = normalizeResourceSlashes(Path.GetRelativePath(this.siteAssetsDir, fullPath));
+      const relativePath = normalizeResourceSlashes(relative(this.siteAssetsDir, fullPath));
       const resource = this.get(relativePath);
       if (resource === undefined || !resourceMatchesMediaType(resource.mediaType, mediaType)) continue;
       result.push(resource);
@@ -200,7 +200,7 @@ export class ResourceManager {
     if (themeAssetsDir !== undefined) {
       for (let index = 0; index < this.themeAssetFiles.length; index++) {
         const fullPath = this.themeAssetFiles[index]!;
-        const relativePath = normalizeResourceSlashes(Path.GetRelativePath(themeAssetsDir, fullPath));
+        const relativePath = normalizeResourceSlashes(relative(themeAssetsDir, fullPath));
         if (selected.has(relativePath)) continue;
         const resource = this.get(relativePath);
         if (resource !== undefined && resourceMatchesMediaType(resource.mediaType, mediaType)) {
@@ -260,8 +260,8 @@ export class ResourceManager {
       throw createTsumoError("TSUMO_RESOURCE_OUTPUT_PATH_MISSING", "Publishable resource has an empty output path");
     }
     const destination = resolveContainedResourcePath(this.outputDir, normalized);
-    const directory = Path.GetDirectoryName(destination);
-    if (directory !== undefined && directory !== "") Directory.CreateDirectory(directory);
+    const directory = dirname(destination);
+    if (directory !== "") ensureDir(directory);
     writeFileSync(destination, resource.bytes);
   }
 

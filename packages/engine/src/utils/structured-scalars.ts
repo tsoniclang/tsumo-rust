@@ -1,5 +1,4 @@
 import type { int32 as int } from "@tsonic/core/types.js";
-import { Char } from "@tsonic/dotnet/System.js";
 
 import type { TsumoError } from "../diagnostics.js";
 import { ParamValue } from "../params.js";
@@ -27,7 +26,7 @@ const decodeHexEscape = (
   if (value > 0x10ffff || (value >= 0xd800 && value <= 0xdfff)) {
     throw invalid("String escape does not name a Unicode scalar value");
   }
-  return Char.ConvertFromUtf32(value);
+  return String.fromCodePoint(value);
 };
 
 const decodeSingleQuoted = (

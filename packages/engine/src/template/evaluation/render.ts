@@ -1,4 +1,4 @@
-import { StringBuilder } from "@tsonic/dotnet/System.Text.js";
+import { TextBuilder } from "../../utils/text-builder.js";
 import { createTsumoError } from "../../diagnostics.js";
 import { compareText } from "../../utils/strings.js";
 import type { TemplateEnvironment } from "../environment.js";
@@ -103,7 +103,7 @@ const toRangeValues = (value: TemplateValue): TemplateRangeValues | undefined =>
 
 export const renderTemplateNodes = (
   nodes: TemplateNode[],
-  output: StringBuilder,
+  output: TextBuilder,
   scope: RenderScope,
   environment: TemplateEnvironment,
   overrides: Map<string, TemplateNode[]>,
@@ -116,18 +116,18 @@ export const renderTemplateNodes = (
 
 export const renderTemplateNode = (
   node: TemplateNode,
-  output: StringBuilder,
+  output: TextBuilder,
   scope: RenderScope,
   environment: TemplateEnvironment,
   overrides: Map<string, TemplateNode[]>,
   defines: Map<string, TemplateNode[]>,
 ): void => {
   if (node instanceof TextNode) {
-    output.Append(node.text);
+    output.append(node.text);
     return;
   }
   if (node instanceof OutputNode) {
-    output.Append(stringify(evaluatePipeline(node.pipeline, scope, environment, overrides, defines), node.escape));
+    output.append(stringify(evaluatePipeline(node.pipeline, scope, environment, overrides, defines), node.escape));
     return;
   }
   if (node instanceof AssignmentNode) {

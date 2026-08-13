@@ -1,0 +1,12 @@
+/home/jeswin/repos/tsoniclang/tsumo-rust/crates/tsumo_platform/target/debug/deps/gif-584045b8c232927c.d: /home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/lib.rs /home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/common.rs /home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/encoder.rs /home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/reader/mod.rs /home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/reader/converter.rs /home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/reader/decoder.rs /home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/traits.rs /home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/../README.md
+
+/home/jeswin/repos/tsoniclang/tsumo-rust/crates/tsumo_platform/target/debug/deps/libgif-584045b8c232927c.rmeta: /home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/lib.rs /home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/common.rs /home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/encoder.rs /home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/reader/mod.rs /home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/reader/converter.rs /home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/reader/decoder.rs /home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/traits.rs /home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/../README.md
+
+/home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/lib.rs:
+/home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/common.rs:
+/home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/encoder.rs:
+/home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/reader/mod.rs:
+/home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/reader/converter.rs:
+/home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/reader/decoder.rs:
+/home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/traits.rs:
+/home/jeswin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gif-0.14.2/src/../README.md:

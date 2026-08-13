@@ -1,4 +1,4 @@
-import { Path } from "@tsonic/dotnet/System.IO.js";
+import { join, resolve } from "node:path";
 import type { int32 as int } from "@tsonic/core/types.js";
 import { Markdown } from "@tsonic/dotnet/Markdig.js";
 import { combineUrl, renderWithBase, resolveThemeDir, selectTemplate } from "../build/layout.js";
@@ -37,7 +37,7 @@ import {
 import { renderSearchIndexJson, SearchDocument } from "./search-index.js";
 
 export const buildDocsSite = (request: BuildRequest, docsLoaded: LoadedDocsConfig, outDir: string): int => {
-  const siteDir = Path.GetFullPath(request.siteDir);
+  const siteDir = resolve(request.siteDir);
   const loaded = loadSiteConfig(siteDir);
   const config = loaded.config;
 
@@ -54,9 +54,9 @@ export const buildDocsSite = (request: BuildRequest, docsLoaded: LoadedDocsConfi
   const outputPlan = new SiteOutputPlan();
 
   if (themeDir !== undefined) {
-    outputPlan.addDirectory(Path.Combine(themeDir, "static"), "", "theme static files", "theme-static");
+    outputPlan.addDirectory(join(themeDir, "static"), "", "theme static files", "theme-static");
   }
-  outputPlan.addDirectory(Path.Combine(siteDir, "static"), "", "site static files", "site-static");
+  outputPlan.addDirectory(join(siteDir, "static"), "", "site static files", "site-static");
 
   const emptyPages: PageContext[] = [];
   const emptyTranslations: PageContext[] = [];
@@ -123,7 +123,7 @@ export const buildDocsSite = (request: BuildRequest, docsLoaded: LoadedDocsConfi
       const dateUtc = fm.date ?? source.modifiedAt;
       const dateString = dateUtc.toISOString();
       const lastmodString = source.modifiedAt.toISOString();
-      const file = new PageFile(Path.GetFullPath(r.sourcePath), r.dirKey === "" ? "" : r.dirKey + "/", baseName);
+      const file = new PageFile(resolve(r.sourcePath), r.dirKey === "" ? "" : r.dirKey + "/", baseName);
 
       const params = fm.Params;
       params.set("mount", ParamValue.string(mount.name));
@@ -272,7 +272,7 @@ export const buildDocsSite = (request: BuildRequest, docsLoaded: LoadedDocsConfi
           const dateUtc = fm.date ?? idxRoute.modifiedAt;
           dateString = dateUtc.toISOString();
           lastmodString = idxRoute.modifiedAt.toISOString();
-          file = new PageFile(Path.GetFullPath(route.sourcePath), dirKey === "" ? "" : dirKey + "/", "_index");
+          file = new PageFile(resolve(route.sourcePath), dirKey === "" ? "" : dirKey + "/", "_index");
           params = fm.Params;
           params.set("relPath", ParamValue.string(route.relPath));
           const editUrl = createDocsEditUrl(mount, route.relPath);

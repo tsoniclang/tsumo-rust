@@ -1,4 +1,3 @@
-import { Int32 } from "@tsonic/dotnet/System.js";
 import type { int32 as int } from "@tsonic/core/types.js";
 import { createTsumoError } from "../../diagnostics.js";
 import { PageContext } from "../../models.js";
@@ -17,6 +16,7 @@ import { globMatch } from "./path-semantics.js";
 import { resolvePath } from "./property-semantics.js";
 import { isNumberLiteral } from "./scalar-semantics.js";
 import { getPathExtension } from "./serialization.js";
+import { parseInt32 } from "../../utils/int32.js";
 
 export const evalToken = (token: string, scope: RenderScope): TemplateValue => {
   const t = token.trim();
@@ -51,7 +51,7 @@ export const evalToken = (token: string, scope: RenderScope): TemplateValue => {
   if (lit !== undefined) return new StringValue(lit);
   if (t === "true") return new BoolValue(true);
   if (t === "false") return new BoolValue(false);
-  if (isNumberLiteral(t)) return new NumberValue(Int32.Parse(t));
+  if (isNumberLiteral(t)) return new NumberValue(parseInt32(t)!);
   return new StringValue(t);
 };
 

@@ -1,9 +1,9 @@
 import { Buffer } from "node:buffer";
-import { Environment } from "@tsonic/dotnet/System.js";
-import { File, Path } from "@tsonic/dotnet/System.IO.js";
+import { cwd } from "node:process";
+import { dirname, extname, isAbsolute, relative, resolve, sep } from "node:path";
 import type { int32 as int } from "@tsonic/core/types.js";
 import { HtmlString } from "../../utils/html.js";
-import { listFilesRecursive, readBinaryFile } from "../../fs.js";
+import { fileExists, listFilesRecursive, readBinaryFile } from "../../fs.js";
 import { replaceText, substringCount, substringFrom } from "../../utils/strings.js";
 import { renderMarkdownWithShortcodes } from "../../markdown.js";
 import { ParamKind } from "../../params.js";
@@ -126,23 +126,29 @@ export const callContextFunction = (
         const normalized = normalizeRelPath(raw);
         if (normalized === "") return nil;
 
-        const pageDir = Path.GetDirectoryName(pageFile.Filename);
-        if (pageDir === undefined || pageDir.trim() === "") return nil;
+        const pageDir = dirname(pageFile.Filename);
+        if (pageDir.trim() === "") return nil;
 
-        const pageDirFull = Path.GetFullPath(pageDir);
-        const dirSeparator = `${Path.DirectorySeparatorChar}`;
-        const pagePrefix = pageDirFull.endsWith(dirSeparator) ? pageDirFull : pageDirFull + dirSeparator;
+        const pageDirFull = resolve(pageDir);
+        const dirSeparator = sep;
         const slash = "/";
         const osRel = replaceText(
           normalized,
           slash,
           dirSeparator
         );
-        const candidate = Path.GetFullPath(Path.Combine(pageDirFull, osRel));
-        if (!candidate.startsWith(pagePrefix) || !File.Exists(candidate)) return nil;
+        const candidate = resolve(pageDirFull, osRel);
+        const candidateRelative = relative(pageDirFull, candidate);
+        if (
+          candidateRelative === "" ||
+          candidateRelative === ".." ||
+          candidateRelative.startsWith(`..${sep}`) ||
+          isAbsolute(candidateRelative) ||
+          !fileExists(candidate)
+        ) return nil;
 
         const bytes = readBinaryFile(candidate);
-        const ext = (Path.GetExtension(candidate) ?? "").toLowerCase();
+        const ext = extname(candidate).toLowerCase();
         const isText = ext === ".js" || ext === ".json" || ext === ".css" || ext === ".svg" || ext === ".html" || ext === ".txt";
         const text = isText ? bytes.toString("utf8") : undefined;
 
@@ -159,17 +165,17 @@ export const callContextFunction = (
         const pattern = toPlainString(args[0]!).trim();
         if (pattern === "") return nil;
 
-        const pageDir = Path.GetDirectoryName(pageFile.Filename);
-        if (pageDir === undefined || pageDir.trim() === "") return nil;
+        const pageDir = dirname(pageFile.Filename);
+        if (pageDir.trim() === "") return nil;
 
         const files = listFilesRecursive(pageDir, "*");
         for (let i = 0; i < files.length; i++) {
           const filePath = files[i]!;
-          const rel = filePath.length > 0 ? replaceText(Path.GetRelativePath(pageDir, filePath), "\\", "/") : "";
+          const rel = filePath.length > 0 ? replaceText(relative(pageDir, filePath), "\\", "/") : "";
           if (rel === "" || !globMatch(pattern, rel)) continue;
 
           const bytes = readBinaryFile(filePath);
-          const ext = (Path.GetExtension(filePath) ?? "").toLowerCase();
+          const ext = extname(filePath).toLowerCase();
           const isText = ext === ".js" || ext === ".json" || ext === ".css" || ext === ".svg" || ext === ".html" || ext === ".txt";
           const text = isText ? bytes.toString("utf8") : undefined;
 
@@ -302,7 +308,7 @@ export const callContextFunction = (
 
   if (name === "hugo.ismultilingual") return new BoolValue(false);
   if (name === "hugo.ismultihost") return new BoolValue(false);
-  if (name === "hugo.workingdir") return new StringValue(Environment.CurrentDirectory);
+  if (name === "hugo.workingdir") return new StringValue(cwd());
   // hugo.Version returns a VersionStringValue for semver-like comparison
   // Report a high version to pass theme version gates (e.g., PaperMod requires >= 0.146.0)
   if (name === "hugo.version") return new VersionStringValue("0.146.0");
