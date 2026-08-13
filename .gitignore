@@ -44,6 +44,7 @@ jspm_packages/
 # Tsonic outputs (per tsonic guidance)
 # Commit: tsonic.json, src/**, lib/
 # Gitignore: node_modules/, .tsonic/, generated/, out/, dist/
+**/target/
 generated/
 .tsonic/
 out/
