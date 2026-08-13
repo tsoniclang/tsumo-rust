@@ -1,0 +1,23 @@
+import { Uri } from "@tsonic/dotnet/System.js";
+import { TemplateValue } from "./base.js";
+
+export class UrlParts {
+  path: string;
+  rawQuery: string;
+  fragment: string;
+
+  constructor(path: string, rawQuery: string, fragment: string) {
+    this.path = path;
+    this.rawQuery = rawQuery;
+    this.fragment = fragment;
+  }
+}
+
+export class UrlValue extends TemplateValue {
+  value: Uri;
+
+  constructor(value: Uri) {
+    super();
+    this.value = value;
+  }
+}

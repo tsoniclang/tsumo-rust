@@ -1,0 +1,109 @@
+import type { Pipeline } from "./syntax/expressions.js";
+
+export class TemplateNode {}
+
+export class TextNode extends TemplateNode {
+  text: string;
+
+  constructor(text: string) {
+    super();
+    this.text = text;
+  }
+}
+
+export class OutputNode extends TemplateNode {
+  pipeline: Pipeline;
+  escape: boolean;
+
+  constructor(pipeline: Pipeline, escape: boolean) {
+    super();
+    this.pipeline = pipeline;
+    this.escape = escape;
+  }
+}
+
+export class AssignmentNode extends TemplateNode {
+  name: string;
+  pipeline: Pipeline;
+  declare: boolean;
+
+  constructor(name: string, pipeline: Pipeline, declare: boolean) {
+    super();
+    this.name = name;
+    this.pipeline = pipeline;
+    this.declare = declare;
+  }
+}
+
+export class TemplateInvokeNode extends TemplateNode {
+  name: string;
+  context: Pipeline;
+
+  constructor(name: string, context: Pipeline) {
+    super();
+    this.name = name;
+    this.context = context;
+  }
+}
+
+export class IfNode extends TemplateNode {
+  condition: Pipeline;
+  thenNodes: TemplateNode[];
+  elseNodes: TemplateNode[];
+
+  constructor(condition: Pipeline, thenNodes: TemplateNode[], elseNodes: TemplateNode[]) {
+    super();
+    this.condition = condition;
+    this.thenNodes = thenNodes;
+    this.elseNodes = elseNodes;
+  }
+}
+
+export class RangeNode extends TemplateNode {
+  expr: Pipeline;
+  keyVar: string | undefined;
+  valueVar: string | undefined;
+  body: TemplateNode[];
+  elseBody: TemplateNode[];
+
+  constructor(
+    expr: Pipeline,
+    keyVar: string | undefined,
+    valueVar: string | undefined,
+    body: TemplateNode[],
+    elseBody: TemplateNode[],
+  ) {
+    super();
+    this.expr = expr;
+    this.keyVar = keyVar;
+    this.valueVar = valueVar;
+    this.body = body;
+    this.elseBody = elseBody;
+  }
+}
+
+export class WithNode extends TemplateNode {
+  expr: Pipeline;
+  body: TemplateNode[];
+  elseBody: TemplateNode[];
+
+  constructor(expr: Pipeline, body: TemplateNode[], elseBody: TemplateNode[]) {
+    super();
+    this.expr = expr;
+    this.body = body;
+    this.elseBody = elseBody;
+  }
+}
+
+export class BlockNode extends TemplateNode {
+  name: string;
+  context: Pipeline;
+  fallback: TemplateNode[];
+
+  constructor(name: string, context: Pipeline, fallback: TemplateNode[]) {
+    super();
+    this.name = name;
+    this.context = context;
+    this.fallback = fallback;
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "siteName": "tsumo docs example",
+  "homeMount": "Tsonic",
+  "strictLinks": true,
+  "search": true,
+  "searchFile": "search.json",
+  "mounts": [
+    {
+      "name": "Tsonic",
+      "source": "./mounts/tsonic",
+      "prefix": "/tsonic/",
+      "repoUrl": "https://github.com/tsoniclang/tsumo",
+      "repoBranch": "main",
+      "repoPath": "examples/docs-site/mounts/tsonic",
+      "navPath": "README.md"
+    },
+    {
+      "name": "Tsonic CSharp",
+      "source": "./mounts/tsonic-csharp",
+      "prefix": "/tsonic-csharp/",
+      "repoUrl": "https://github.com/tsoniclang/tsumo",
+      "repoBranch": "main",
+      "repoPath": "examples/docs-site/mounts/tsonic-csharp",
+      "navPath": "README.md"
+    }
+  ]
+}

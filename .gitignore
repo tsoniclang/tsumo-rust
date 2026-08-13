@@ -41,6 +41,34 @@ build/Release
 node_modules/
 jspm_packages/
 
+# Tsonic outputs (per tsonic guidance)
+# Commit: tsonic.json, src/**, lib/
+# Gitignore: node_modules/, .tsonic/, generated/, out/, dist/
+generated/
+.tsonic/
+out/
+dist/
+
+# Site output
+public/
+public-aot/
+**/public-test/
+.tmp/
+
+# Local agent/task scratch
+.analysis/
+
+# .NET build outputs
+**/bin/
+**/obj/
+
+# Vendored DLL build outputs
+libs/*.pdb
+libs/*.deps.json
+libs/*.runtimeconfig.json
+libs/*.dll
+libs/nodejs.dll
+
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
 
@@ -81,7 +109,6 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist
-.output
 
 # Gatsby files
 .cache/
@@ -92,8 +119,9 @@ dist
 # vuepress build output
 .vuepress/dist
 
-# vuepress v2.x temp directory
+# vuepress v2.x temp and cache directory
 .temp
+.cache
 
 # Sveltekit cache directory
 .svelte-kit/
@@ -123,10 +151,8 @@ dist
 .tern-port
 
 # Stores VSCode versions used for testing VSCode extensions
+.vscode/
 .vscode-test
-
-# pnpm
-.pnpm-store
 
 # yarn v3
 .pnp.*
@@ -137,7 +163,6 @@ dist
 !.yarn/sdks
 !.yarn/versions
 
-# Vite files
+# Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
-.vite/

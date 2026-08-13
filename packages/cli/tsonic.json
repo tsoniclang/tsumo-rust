@@ -1,0 +1,17 @@
+{
+  "$schema": "https://tsonic.org/schema/v1.json",
+  "entryPoint": "cli-main.ts",
+  "rootDir": "src",
+  "outDir": "out",
+  "targets": [
+    {
+      "id": "rust",
+      "surfaces": ["js"],
+      "options": {
+        "crateName": "tsumo",
+        "edition": "2024",
+        "outputType": "bin"
+      }
+    }
+  ]
+}

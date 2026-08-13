@@ -1,0 +1,29 @@
+{
+  "name": "tsumo-rust",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build:tsonic && npm run build:rust",
+    "build:tsonic": "bash scripts/build-tsonic.sh",
+    "build:rust": "bash scripts/build-rust.sh",
+    "test": "node --test \"test/**/*.test.mjs\"",
+    "verify-all": "bash scripts/verify-all.sh"
+  },
+  "devDependencies": {
+    "@tsonic/cli": "file:../tsonic/packages/cli",
+    "@tsonic/host": "file:../tsonic/packages/host",
+    "@tsonic/rust-js": "file:../rust-js",
+    "@tsonic/rust-nodejs": "file:../rust-nodejs",
+    "@tsonic/rust-runtime": "file:../rust-runtime",
+    "@tsonic/source-core": "file:../tsonic/packages/source-core",
+    "@tsonic/target-api": "file:../tsonic/packages/target-api",
+    "@tsonic/target-rust": "file:../tsonic-rust",
+    "@tsonic/tsts": "file:../tsonic/packages/tsts"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
