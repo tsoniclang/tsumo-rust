@@ -6,4 +6,3 @@ categories: ["docs"]
 ---
 
 This is a nested section list page under `posts/series/`.
-

@@ -65,4 +65,3 @@ Docs mode uses:
 
 - Render hooks are loaded from `layouts/_markup/*.html` and `layouts/_default/_markup/*.html` (site or theme).
 - Shortcodes are loaded from `layouts/shortcodes/<name>.html` and `layouts/_shortcodes/<name>.html` (site or theme).
-

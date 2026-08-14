@@ -12,4 +12,3 @@ This post lives at `content/posts/series/part-1.md` and builds to `/posts/series
 
 - [ ] Write Part 2
 - [x] Publish Part 1
-

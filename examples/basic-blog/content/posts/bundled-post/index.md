@@ -12,4 +12,3 @@ The `cover.txt` file and `assets/` folder are copied alongside the built page:
 
 - [cover.txt](cover.txt)
 - [assets/note.txt](assets/note.txt)
-
