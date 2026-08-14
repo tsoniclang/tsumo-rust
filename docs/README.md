@@ -1,6 +1,6 @@
 # tsumo documentation
 
-tsumo is a Hugo-inspired static site generator implemented in TypeScript and compiled with Tsonic (TS → C# → .NET).
+tsumo is a Hugo-inspired static site generator implemented in TypeScript and compiled with Tsonic to native Rust.
 
 tsumo supports two primary workflows:
 

@@ -1,9 +1,0 @@
-{
-  "name": "@tsumo/markdig",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "build:dll": "dotnet build vendor-src/Markdig.Vendored.csproj -c Release -o ../../.temp/markdig-build"
-  }
-}

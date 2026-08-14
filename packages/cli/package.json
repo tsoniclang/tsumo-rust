@@ -7,8 +7,7 @@
     "@tsumo/engine": "0.0.0"
   },
   "scripts": {
-    "build": "tsonic build --project tsonic.json",
-    "build:rust": "cargo build --manifest-path out/rust/Cargo.toml --locked"
+    "build": "tsonic build --project tsonic.json"
   },
   "devDependencies": {
     "@tsonic/cli": "file:../../../tsonic/packages/cli",

@@ -10,7 +10,8 @@
       "options": {
         "crateName": "tsumo_engine",
         "edition": "2024",
-        "outputType": "lib"
+        "outputType": "lib",
+        "projectFile": "Cargo.toml"
       }
     }
   ]

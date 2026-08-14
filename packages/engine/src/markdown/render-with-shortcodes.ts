@@ -1,11 +1,10 @@
-import { Markdown } from "@tsonic/dotnet/Markdig.js";
 import { parseShortcodes, ShortcodeCall } from "../shortcode.js";
 import { TemplateEnvironment } from "../template/environment.js";
 import { PageContext, SiteContext } from "../models.js";
 import { MarkdownResult } from "./result.js";
-import { markdownPipeline } from "./pipeline.js";
 import { generateTableOfContents } from "./toc.js";
 import { RenderHookContext, renderMarkdownWithHooks } from "./render-hooks.js";
+import { renderMarkdownHtml, renderMarkdownPlainText } from "./platform.js";
 import { createOrdinalTracker, processShortcodeCalls, renderShortcode } from "./shortcodes.js";
 import { normalizeNewlines, findSummaryDividerIndex, summaryMarkerLength, firstBlock } from "./render-basic.js";
 import { substringCount, substringFrom } from "../utils/strings.js";
@@ -149,24 +148,24 @@ export const renderMarkdownWithShortcodes = (
       html = renderMarkdownWithHooks(full, hookCtx);
       summaryHtml = renderMarkdownWithHooks(before, hookCtx).trim();
     } else {
-      html = Markdown.ToHtml(full, markdownPipeline);
-      summaryHtml = Markdown.ToHtml(before, markdownPipeline).trim();
+      html = renderMarkdownHtml(full);
+      summaryHtml = renderMarkdownHtml(before).trim();
     }
-    plainText = Markdown.ToPlainText(full, markdownPipeline);
+    plainText = renderMarkdownPlainText(full);
   } else {
     if (hookCtx.hasAnyHooks()) {
       html = renderMarkdownWithHooks(markdownSource, hookCtx);
     } else {
-      html = Markdown.ToHtml(markdownSource, markdownPipeline);
+      html = renderMarkdownHtml(markdownSource);
     }
-    plainText = Markdown.ToPlainText(markdownSource, markdownPipeline);
+    plainText = renderMarkdownPlainText(markdownSource);
     const summarySource = firstBlock(markdownSource);
     if (summarySource === "") {
       summaryHtml = "";
     } else if (hookCtx.hasAnyHooks()) {
       summaryHtml = renderMarkdownWithHooks(summarySource, hookCtx).trim();
     } else {
-      summaryHtml = Markdown.ToHtml(summarySource, markdownPipeline).trim();
+      summaryHtml = renderMarkdownHtml(summarySource).trim();
     }
   }
 

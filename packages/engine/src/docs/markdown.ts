@@ -1,9 +1,6 @@
-import type { char, int32 as int } from "@tsonic/core/types.js";
-import { Markdown } from "@tsonic/dotnet/Markdig.js";
-import { ContainerBlock, LeafBlock, LinkReferenceDefinition } from "@tsonic/dotnet/Markdig.Syntax.js";
-import type { Block, MarkdownDocument } from "@tsonic/dotnet/Markdig.Syntax.js";
-import { ContainerInline, LinkInline } from "@tsonic/dotnet/Markdig.Syntax.Inlines.js";
-import { MarkdownResult, markdownPipeline } from "../markdown.js";
+import type { int32 as int } from "@tsonic/core/types.js";
+import { MarkdownResult, renderMarkdownPlainText } from "../markdown.js";
+import { createMarkdownDocument } from "../markdown/platform.js";
 import { createTsumoError } from "../diagnostics.js";
 import { DocsMountConfig } from "./models.js";
 import { indexOfText, indexOfTextIgnoreCase, replaceLineEndings, substringCount, substringFrom, trimEndChar, trimStartChar } from "../utils/strings.js";
@@ -99,10 +96,8 @@ const computeGitHubBlobUrl = (mount: DocsMountConfig, repoRelPath: string): stri
   return `${repo}/blob/${branch}/${rel}`;
 };
 
-const maybeRewriteUrl = (urlValue: string | null | undefined, ctx: DocsLinkRewriteContext): string | undefined => {
-  const urlRaw = urlValue;
-  if (urlRaw == null) return undefined;
-  const url = urlRaw.trim();
+const maybeRewriteUrl = (urlValue: string, ctx: DocsLinkRewriteContext): string | undefined => {
+  const url = urlValue.trim();
   if (isUnsafeUrl(url)) {
     throw createTsumoError("TSUMO_DOCS_LINK_UNSAFE", `Unsafe docs link: ${url}`, ctx.sourcePath);
   }
@@ -174,47 +169,6 @@ const maybeRewriteUrl = (urlValue: string | null | undefined, ctx: DocsLinkRewri
   return undefined;
 };
 
-const rewriteInInlines = (container: ContainerInline, ctx: DocsLinkRewriteContext): void => {
-  const it = container.GetEnumerator();
-  while (it.MoveNext()) {
-    const inline = it.Current;
-
-    if (inline instanceof LinkInline) {
-      const link = inline as LinkInline;
-      const updated = maybeRewriteUrl(link.Url, ctx);
-      if (updated !== undefined) link.Url = updated;
-    }
-
-    if (inline instanceof ContainerInline) rewriteInInlines(inline as ContainerInline, ctx);
-  }
-  it.Dispose();
-};
-
-const rewriteInBlock = (block: Block, ctx: DocsLinkRewriteContext): void => {
-  if (block instanceof LeafBlock) {
-    const leaf = block as LeafBlock;
-    const inline = leaf.Inline;
-    if (inline != null) rewriteInInlines(inline, ctx);
-
-    if (block instanceof LinkReferenceDefinition) {
-      const def = block as LinkReferenceDefinition;
-      const updated = maybeRewriteUrl(def.Url, ctx);
-      if (updated !== undefined) def.Url = updated;
-    }
-  }
-
-  if (block instanceof ContainerBlock) {
-    const container = block as ContainerBlock;
-    const it = container.GetEnumerator();
-    while (it.MoveNext()) rewriteInBlock(it.Current, ctx);
-    it.Dispose();
-  }
-};
-
-const rewriteLinks = (document: MarkdownDocument, ctx: DocsLinkRewriteContext): void => {
-  rewriteInBlock(document, ctx);
-};
-
 const normalizeNewlines = (text: string): string => replaceLineEndings(text, "\n");
 
 const summaryMarker = "<!--more-->";
@@ -230,9 +184,15 @@ const firstBlock = (markdown: string): string => {
 };
 
 const renderWithRewrites = (markdown: string, ctx: DocsLinkRewriteContext): string => {
-  const doc = Markdown.Parse(markdown, markdownPipeline);
-  rewriteLinks(doc, ctx);
-  return Markdown.ToHtml(doc, markdownPipeline);
+  const document = createMarkdownDocument(markdown);
+  const count: int = document.occurrence_count();
+  for (let index: int = 0; index < count; index++) {
+    const occurrence = document.occurrence(index);
+    if (occurrence.kind !== "link" && occurrence.kind !== "image") continue;
+    const updated = maybeRewriteUrl(occurrence.destination, ctx);
+    if (updated !== undefined) document.replace_url(index, updated);
+  }
+  return document.render();
 };
 
 export const renderDocsMarkdown = (markdownRaw: string, ctx: DocsLinkRewriteContext): MarkdownResult => {
@@ -243,11 +203,11 @@ export const renderDocsMarkdown = (markdownRaw: string, ctx: DocsLinkRewriteCont
     const before = substringCount(markdown, 0, moreIndex);
     const after = substringFrom(markdown, moreIndex + summaryMarkerLength);
     const full = before + after;
-    return new MarkdownResult(renderWithRewrites(full, ctx), renderWithRewrites(before, ctx).trim(), Markdown.ToPlainText(full, markdownPipeline), "");
+    return new MarkdownResult(renderWithRewrites(full, ctx), renderWithRewrites(before, ctx).trim(), renderMarkdownPlainText(full), "");
   }
 
   const html = renderWithRewrites(markdown, ctx);
   const summarySource = firstBlock(markdown);
   const summaryHtml = summarySource === "" ? "" : renderWithRewrites(summarySource, ctx).trim();
-  return new MarkdownResult(html, summaryHtml, Markdown.ToPlainText(markdown, markdownPipeline), "");
+  return new MarkdownResult(html, summaryHtml, renderMarkdownPlainText(markdown), "");
 };

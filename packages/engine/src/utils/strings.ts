@@ -50,6 +50,17 @@ export const charAtText = (source: string, index: int): string => {
   return source.substring(index, index + 1);
 };
 
+export const codePointAtText = (source: string, index: int): string => {
+  const codePoint = source.codePointAt(index);
+  return codePoint === undefined ? "" : String.fromCodePoint(codePoint);
+};
+
+export const nextCodePointIndex = (source: string, index: int): int => {
+  const codePoint = source.codePointAt(index);
+  if (codePoint === undefined) return source.length as int;
+  return index + (codePoint > 0xffff ? 2 : 1);
+};
+
 export const trimStartChar = (source: string, ch: string): string => {
   let start = 0;
   while (start < source.length && source.substring(start, start + 1) === ch) {

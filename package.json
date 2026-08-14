@@ -9,6 +9,7 @@
     "build": "npm run build:tsonic && npm run build:rust",
     "build:tsonic": "bash scripts/build-tsonic.sh",
     "build:rust": "bash scripts/build-rust.sh",
+    "test:compiled": "TSUMO_TEST_ROOT=.temp/test-runs/compiled target/debug/tsumo-tests",
     "test": "node --test \"test/**/*.test.mjs\"",
     "verify-all": "bash scripts/verify-all.sh"
   },

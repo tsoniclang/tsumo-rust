@@ -1,12 +1,17 @@
-import { attribute } from "@tsonic/core/lang.js";
-
-import { Assert, FactAttribute } from "@tsonic/dotnet/Xunit.js";
-import { Exception } from "@tsonic/dotnet/System.js";
-
-import { Directory, File, Path, SearchOption } from "@tsonic/dotnet/System.IO.js";
+import { join } from "node:path";
 
 import { BuildRequest, TsumoError, buildSite, initSite, newContent } from "@tsumo/engine/index.js";
-import { createTestDirectory, deleteTestDirectory } from "./test-root.js";
+import { listFilesRecursive } from "@tsumo/engine/testing.js";
+import {
+  Assert,
+  createDirectory,
+  createTestDirectory,
+  deleteTestDirectory,
+  directoryExists,
+  fileExists,
+  runTest,
+  writeTextFile,
+} from "./test-root.js";
 
 const captureScaffoldDiagnostic = (operation: () => void): string => {
   try {
@@ -15,7 +20,7 @@ const captureScaffoldDiagnostic = (operation: () => void): string => {
     if (error instanceof TsumoError) return error.diagnostic.code;
     throw error;
   }
-  throw new Exception("Expected a scaffold diagnostic");
+  throw new Error("Expected a scaffold diagnostic");
 };
 
 export class ScaffoldAndBuildTests {
@@ -32,11 +37,11 @@ export class ScaffoldAndBuildTests {
 
       const result = buildSite(req);
 
-      Assert.True(Directory.Exists(outDir));
-      Assert.True(File.Exists(Path.Combine(outDir, "index.html")));
-      Assert.True(File.Exists(Path.Combine(outDir, "posts", "hello-world", "index.html")));
-      Assert.Equal(12, result.pagesBuilt);
-      Assert.Equal(13, Directory.GetFiles(outDir, "*", SearchOption.AllDirectories).length);
+      Assert.True(directoryExists(outDir));
+      Assert.True(fileExists(join(outDir, "index.html")));
+      Assert.True(fileExists(join(outDir, "posts", "hello-world", "index.html")));
+      Assert.NumberEqual(12, result.pagesBuilt);
+      Assert.NumberEqual(13, listFilesRecursive(outDir, "*").length);
     } finally {
       deleteTestDirectory(outDir);
       deleteTestDirectory(siteDir);
@@ -58,7 +63,7 @@ export class ScaffoldAndBuildTests {
 
       buildSite(req);
 
-      Assert.True(!File.Exists(Path.Combine(outDir, "posts", "my-draft", "index.html")));
+      Assert.True(!fileExists(join(outDir, "posts", "my-draft", "index.html")));
     } finally {
       deleteTestDirectory(outDir);
       deleteTestDirectory(siteDir);
@@ -80,7 +85,7 @@ export class ScaffoldAndBuildTests {
 
       buildSite(req);
 
-      Assert.True(File.Exists(Path.Combine(outDir, "posts", "my-post", "index.html")));
+      Assert.True(fileExists(join(outDir, "posts", "my-post", "index.html")));
     } finally {
       deleteTestDirectory(outDir);
       deleteTestDirectory(siteDir);
@@ -90,26 +95,26 @@ export class ScaffoldAndBuildTests {
   scaffold_boundaries_fail_closed_with_exact_diagnostics(): void {
     const root = createTestDirectory("scaffold-boundaries");
     try {
-      const occupied = Path.Combine(root, "occupied");
-      Directory.CreateDirectory(occupied);
-      File.WriteAllText(Path.Combine(occupied, "keep.txt"), "keep");
-      Assert.Equal(
+      const occupied = join(root, "occupied");
+      createDirectory(occupied);
+      writeTextFile(join(occupied, "keep.txt"), "keep");
+      Assert.StringEqual(
         "TSUMO_SCAFFOLD_DESTINATION_NOT_EMPTY",
         captureScaffoldDiagnostic(() => {
           initSite(occupied);
         }),
       );
 
-      const site = Path.Combine(root, "site");
+      const site = join(root, "site");
       initSite(site);
-      Assert.Equal(
+      Assert.StringEqual(
         "TSUMO_SCAFFOLD_CONTENT_PATH_ESCAPES_ROOT",
         captureScaffoldDiagnostic(() => {
           newContent(site, "../outside.md");
         }),
       );
       newContent(site, "posts/exact.md");
-      Assert.Equal(
+      Assert.StringEqual(
         "TSUMO_SCAFFOLD_CONTENT_EXISTS",
         captureScaffoldDiagnostic(() => {
           newContent(site, "posts/exact.md");
@@ -121,7 +126,18 @@ export class ScaffoldAndBuildTests {
   }
 }
 
-attribute<ScaffoldAndBuildTests>().method((target) => target.scaffold_then_build).add(FactAttribute);
-attribute<ScaffoldAndBuildTests>().method((target) => target.drafts_skipped_by_default).add(FactAttribute);
-attribute<ScaffoldAndBuildTests>().method((target) => target.new_content_then_build).add(FactAttribute);
-attribute<ScaffoldAndBuildTests>().method((target) => target.scaffold_boundaries_fail_closed_with_exact_diagnostics).add(FactAttribute);
+export const runScaffoldAndBuildTests = (): void => {
+  const tests = new ScaffoldAndBuildTests();
+  runTest("scaffold then build", () => {
+    tests.scaffold_then_build();
+  });
+  runTest("drafts are skipped by default", () => {
+    tests.drafts_skipped_by_default();
+  });
+  runTest("new content then build", () => {
+    tests.new_content_then_build();
+  });
+  runTest("scaffold boundaries fail closed with exact diagnostics", () => {
+    tests.scaffold_boundaries_fail_closed_with_exact_diagnostics();
+  });
+};

@@ -14,7 +14,7 @@ This site is built by `tsumo`, a Hugo-inspired engine written in Tsonic TypeScri
 ## Features
 
 - [x] Front matter (YAML/TOML/JSON)
-- [x] Markdown → HTML (Markdig + GFM extensions)
+- [x] Markdown → HTML (native Rust GFM pipeline)
 - [x] Hugo-style `layouts/` + `static/`
 - [x] `build` + `server` commands
 

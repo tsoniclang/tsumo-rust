@@ -1,8 +1,22 @@
-import "./scaffold-and-build.test.js";
-import "./input-boundaries.test.js";
-import "./filesystem-boundaries.test.js";
-import "./content-and-menu.test.js";
-import "./docs-domain.test.js";
-import "./output-plan.test.js";
-import "./resource-pipeline.test.js";
-import "./template-runtime.test.js";
+import { runContentAndMenuTests } from "./content-and-menu.test.js";
+import { runDocsDomainTests } from "./docs-domain.test.js";
+import { runFilesystemBoundaryTests } from "./filesystem-boundaries.test.js";
+import { runInputBoundaryTests } from "./input-boundaries.test.js";
+import { runOutputPlanTests } from "./output-plan.test.js";
+import { runResourcePipelineTests } from "./resource-pipeline.test.js";
+import { runScaffoldAndBuildTests } from "./scaffold-and-build.test.js";
+import { runTemplateRuntimeTests } from "./template-runtime.test.js";
+import { completeTests } from "./test-root.js";
+
+export function main(): void {
+  runScaffoldAndBuildTests();
+  runInputBoundaryTests();
+  runFilesystemBoundaryTests();
+  runContentAndMenuTests();
+  runDocsDomainTests();
+  runOutputPlanTests();
+  runResourcePipelineTests();
+  runTemplateRuntimeTests();
+  completeTests(40);
+  return;
+}

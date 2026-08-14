@@ -6,27 +6,8 @@ mkdir -p "$ROOT/.temp/build-runs"
 LOG_ROOT="${TSUMO_RUST_LOG_DIR:-$(mktemp -d "$ROOT/.temp/build-runs/rust-XXXXXXXX")}"
 mkdir -p "$LOG_ROOT"
 
-packages=(engine cli tests)
-pids=()
-
-for package in "${packages[@]}"; do
-  cargo build --manifest-path "$ROOT/packages/$package/out/rust/Cargo.toml" --locked \
-    >"$LOG_ROOT/$package.log" 2>&1 &
-  pids+=("$!")
-done
-
-failed=0
-for index in "${!packages[@]}"; do
-  package="${packages[$index]}"
-  if wait "${pids[$index]}"; then
-    status="PASS"
-  else
-    status="FAIL"
-    failed=1
-  fi
-  echo "=== rust $package: $status ==="
-  cat "$LOG_ROOT/$package.log"
-done
-
+export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}"
+/usr/bin/time -v cargo build --manifest-path "$ROOT/Cargo.toml" --workspace --locked \
+  >"$LOG_ROOT/workspace.log" 2>&1
+cat "$LOG_ROOT/workspace.log"
 echo "Rust build logs: $LOG_ROOT"
-test "$failed" -eq 0

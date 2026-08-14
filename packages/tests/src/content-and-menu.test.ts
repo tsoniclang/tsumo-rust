@@ -1,8 +1,5 @@
-import { attribute } from "@tsonic/core/lang.js";
 import type { int32 as int } from "@tsonic/core/types.js";
-import { Directory, File, Path } from "@tsonic/dotnet/System.IO.js";
-import { Exception } from "@tsonic/dotnet/System.js";
-import { Assert, FactAttribute } from "@tsonic/dotnet/Xunit.js";
+import { join } from "node:path";
 import {
   buildMenuHierarchy,
   configureSiteMenus,
@@ -19,7 +16,14 @@ import {
   SiteContext,
   TsumoError,
 } from "@tsumo/engine/testing.js";
-import { createTestDirectory, deleteTestDirectory } from "./test-root.js";
+import {
+  Assert,
+  createDirectory,
+  createTestDirectory,
+  deleteTestDirectory,
+  runTest,
+  writeTextFile,
+} from "./test-root.js";
 
 const captureContentDiagnostic = (operation: () => void): string => {
   try {
@@ -28,7 +32,7 @@ const captureContentDiagnostic = (operation: () => void): string => {
     if (error instanceof TsumoError) return error.diagnostic.code;
     throw error;
   }
-  throw new Exception("Expected a content or menu diagnostic");
+  throw new Error("Expected a content or menu diagnostic");
 };
 
 const createMenuEntry = (identity: string, parent: string, weight: int, pageRef: string): MenuEntry =>
@@ -98,17 +102,17 @@ export class ContentAndMenuTests {
   content_discovery_is_deterministic_and_excludes_drafts_before_claiming_routes(): void {
     const root = createTestDirectory("content-discovery");
     try {
-      File.WriteAllText(Path.Combine(root, "z.md"), "---\ntitle: Z\ndate: 2026-01-01T00:00:00Z\n---\nZ");
-      File.WriteAllText(Path.Combine(root, "a.md"), "---\ntitle: A\ndate: 2026-01-01T00:00:00Z\n---\nA");
-      File.WriteAllText(Path.Combine(root, "published.md"), "---\ntitle: Published\ndate: 2025-01-01T00:00:00Z\nslug: shared\n---\nPublished");
-      File.WriteAllText(Path.Combine(root, "draft.md"), "---\ntitle: Draft\ndate: 2025-01-01T00:00:00Z\nslug: shared\ndraft: true\n---\nDraft");
+      writeTextFile(join(root, "z.md"), "---\ntitle: Z\ndate: 2026-01-01T00:00:00Z\n---\nZ");
+      writeTextFile(join(root, "a.md"), "---\ntitle: A\ndate: 2026-01-01T00:00:00Z\n---\nA");
+      writeTextFile(join(root, "published.md"), "---\ntitle: Published\ndate: 2025-01-01T00:00:00Z\nslug: shared\n---\nPublished");
+      writeTextFile(join(root, "draft.md"), "---\ntitle: Draft\ndate: 2025-01-01T00:00:00Z\nslug: shared\ndraft: true\n---\nDraft");
 
       const production = discoverContent(root, false);
-      Assert.Equal(3, production.pages.length);
+      Assert.NumberEqual(3, production.pages.length);
       Assert.True(production.pages[0]!.relPermalink === "/a/");
       Assert.True(production.pages[1]!.relPermalink === "/z/");
       Assert.True(production.pages[2]!.relPermalink === "/shared/");
-      Assert.Equal(
+      Assert.StringEqual(
         "TSUMO_CONTENT_ROUTE_CONFLICT",
         captureContentDiagnostic(() => {
           discoverContent(root, true);
@@ -123,18 +127,18 @@ export class ContentAndMenuTests {
     const escapeRoot = createTestDirectory("content-route-escape");
     const conflictRoot = createTestDirectory("content-route-conflict");
     try {
-      File.WriteAllText(Path.Combine(escapeRoot, "bad.md"), "---\ntitle: Bad\nslug: ../outside\n---\nBad");
-      Assert.Equal(
+      writeTextFile(join(escapeRoot, "bad.md"), "---\ntitle: Bad\nslug: ../outside\n---\nBad");
+      Assert.StringEqual(
         "TSUMO_CONTENT_ROUTE_SEGMENT_INVALID",
         captureContentDiagnostic(() => {
           discoverContent(escapeRoot, false);
         }),
       );
 
-      Directory.CreateDirectory(Path.Combine(conflictRoot, "guide"));
-      File.WriteAllText(Path.Combine(conflictRoot, "guide.md"), "---\ntitle: Guide\n---\nPage");
-      File.WriteAllText(Path.Combine(conflictRoot, "guide", "_index.md"), "---\ntitle: Guide index\n---\nList");
-      Assert.Equal(
+      createDirectory(join(conflictRoot, "guide"));
+      writeTextFile(join(conflictRoot, "guide.md"), "---\ntitle: Guide\n---\nPage");
+      writeTextFile(join(conflictRoot, "guide", "_index.md"), "---\ntitle: Guide index\n---\nList");
+      Assert.StringEqual(
         "TSUMO_CONTENT_ROUTE_CONFLICT",
         captureContentDiagnostic(() => {
           discoverContent(conflictRoot, false);
@@ -152,24 +156,24 @@ export class ContentAndMenuTests {
       createMenuEntry("child", "alpha", 0, ""),
       createMenuEntry("alpha", "", 0, ""),
     ]);
-    Assert.Equal(2, hierarchy.length);
+    Assert.NumberEqual(2, hierarchy.length);
     Assert.True(hierarchy[0]!.identifier === "alpha");
     Assert.True(hierarchy[0]!.children[0]!.identifier === "child");
     Assert.True(hierarchy[1]!.identifier === "beta");
 
-    Assert.Equal(
+    Assert.StringEqual(
       "TSUMO_MENU_IDENTITY_DUPLICATE",
       captureContentDiagnostic(() => {
         buildMenuHierarchy([createMenuEntry("same", "", 0, ""), createMenuEntry("same", "", 1, "")]);
       }),
     );
-    Assert.Equal(
+    Assert.StringEqual(
       "TSUMO_MENU_PARENT_NOT_FOUND",
       captureContentDiagnostic(() => {
         buildMenuHierarchy([createMenuEntry("child", "missing", 0, "")]);
       }),
     );
-    Assert.Equal(
+    Assert.StringEqual(
       "TSUMO_MENU_PARENT_CYCLE",
       captureContentDiagnostic(() => {
         buildMenuHierarchy([createMenuEntry("one", "two", 0, ""), createMenuEntry("two", "one", 0, "")]);
@@ -191,11 +195,11 @@ export class ContentAndMenuTests {
     configureSiteMenus(sources, pages, site);
     const resolvedPage = exact.page;
     Assert.True(resolvedPage !== undefined);
-    if (resolvedPage === undefined) throw new Exception("Expected exact menu page resolution");
-    Assert.Equal("/articles/post/", resolvedPage.relPermalink);
+    if (resolvedPage === undefined) throw new Error("Expected exact menu page resolution");
+    Assert.StringEqual("/articles/post/", resolvedPage.relPermalink);
 
     site.Menus.set("main", [createMenuEntry("shorthand", "", 0, "post")]);
-    Assert.Equal(
+    Assert.StringEqual(
       "TSUMO_MENU_PAGE_REF_NOT_FOUND",
       captureContentDiagnostic(() => {
         configureSiteMenus(sources, pages, site);
@@ -206,11 +210,11 @@ export class ContentAndMenuTests {
   page_graph_finalizes_home_ancestry_and_taxonomies_before_rendering(): void {
     const root = createTestDirectory("standard-page-graph");
     try {
-      Directory.CreateDirectory(Path.Combine(root, "posts", "series"));
-      File.WriteAllText(Path.Combine(root, "posts", "_index.md"), "---\ntitle: Posts\n---\nPosts");
-      File.WriteAllText(Path.Combine(root, "posts", "series", "_index.md"), "---\ntitle: Series\n---\nSeries");
-      File.WriteAllText(
-        Path.Combine(root, "posts", "series", "part.md"),
+      createDirectory(join(root, "posts", "series"));
+      writeTextFile(join(root, "posts", "_index.md"), "---\ntitle: Posts\n---\nPosts");
+      writeTextFile(join(root, "posts", "series", "_index.md"), "---\ntitle: Series\n---\nSeries");
+      writeTextFile(
+        join(root, "posts", "series", "part.md"),
         "---\ntitle: Part\ndate: 2026-01-01T00:00:00Z\ntags: [alpha]\ncategories: [guides]\n---\nPart",
       );
 
@@ -220,32 +224,45 @@ export class ContentAndMenuTests {
       const page = graph.contentPages[0]!;
       const parent = page.parent;
       Assert.True(parent !== undefined);
-      if (parent === undefined) throw new Exception("Expected page parent");
-      Assert.Equal("/posts/series/", parent.relPermalink);
-      Assert.Equal(3, page.ancestors.length);
-      Assert.Equal("/", page.ancestors[0]!.relPermalink);
-      Assert.Equal("/posts/", page.ancestors[1]!.relPermalink);
-      Assert.Equal("/posts/series/", page.ancestors[2]!.relPermalink);
+      if (parent === undefined) throw new Error("Expected page parent");
+      Assert.StringEqual("/posts/series/", parent.relPermalink);
+      Assert.NumberEqual(3, page.ancestors.length);
+      Assert.StringEqual("/", page.ancestors[0]!.relPermalink);
+      Assert.StringEqual("/posts/", page.ancestors[1]!.relPermalink);
+      Assert.StringEqual("/posts/series/", page.ancestors[2]!.relPermalink);
       const home = graph.site.home;
       Assert.True(home !== undefined);
-      if (home === undefined) throw new Exception("Expected site home");
-      Assert.Equal("/", home.relPermalink);
-      Assert.Equal(1, home.pages.length);
-      Assert.Equal(2, taxonomies.taxonomies.length);
+      if (home === undefined) throw new Error("Expected site home");
+      Assert.StringEqual("/", home.relPermalink);
+      Assert.NumberEqual(1, home.pages.length);
+      Assert.NumberEqual(2, taxonomies.taxonomies.length);
       const tags = graph.site.Taxonomies.get("tags");
       Assert.True(tags !== undefined);
-      if (tags === undefined) throw new Exception("Expected tags taxonomy");
+      if (tags === undefined) throw new Error("Expected tags taxonomy");
       const tagPages = tags.get("alpha");
       Assert.True(tagPages !== undefined);
-      Assert.Equal(8, graph.site.allPages.length);
+      Assert.NumberEqual(8, graph.site.allPages.length);
     } finally {
       deleteTestDirectory(root);
     }
   }
 }
 
-attribute<ContentAndMenuTests>().method((target) => target.content_discovery_is_deterministic_and_excludes_drafts_before_claiming_routes).add(FactAttribute);
-attribute<ContentAndMenuTests>().method((target) => target.content_routes_reject_escape_segments_and_duplicate_outputs).add(FactAttribute);
-attribute<ContentAndMenuTests>().method((target) => target.menu_hierarchy_is_deterministic_and_fails_closed).add(FactAttribute);
-attribute<ContentAndMenuTests>().method((target) => target.menu_page_references_use_exact_routes_without_slug_fallback).add(FactAttribute);
-attribute<ContentAndMenuTests>().method((target) => target.page_graph_finalizes_home_ancestry_and_taxonomies_before_rendering).add(FactAttribute);
+export const runContentAndMenuTests = (): void => {
+  const tests = new ContentAndMenuTests();
+  runTest("content discovery is deterministic and excludes drafts before claiming routes", () => {
+    tests.content_discovery_is_deterministic_and_excludes_drafts_before_claiming_routes();
+  });
+  runTest("content routes reject escape segments and duplicate outputs", () => {
+    tests.content_routes_reject_escape_segments_and_duplicate_outputs();
+  });
+  runTest("menu hierarchy is deterministic and fails closed", () => {
+    tests.menu_hierarchy_is_deterministic_and_fails_closed();
+  });
+  runTest("menu page references use exact routes without slug fallback", () => {
+    tests.menu_page_references_use_exact_routes_without_slug_fallback();
+  });
+  runTest("page graph finalizes home ancestry and taxonomies before rendering", () => {
+    tests.page_graph_finalizes_home_ancestry_and_taxonomies_before_rendering();
+  });
+};

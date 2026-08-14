@@ -6,7 +6,7 @@ tsumo aims to be *Hugo-compatible where it matters* for real sites and themes, w
 
 | Area | Feature | Status | Notes |
 | --- | --- | --- | --- |
-| Markdown | GitHub Flavored Markdown (GFM) | ✅ | Markdig pipeline: GitHub heading IDs, tables, task lists, autolinks, fenced code blocks, emphasis extras |
+| Markdown | GitHub Flavored Markdown (GFM) | ✅ | Rust platform pipeline: stable heading IDs, tables, task lists, autolinks, fenced code blocks, strikethrough, and footnotes |
 | Content | Sections + nested paths | ✅ | `content/posts/series/part-1.md` → `/posts/series/part-1/` |
 | Content | Leaf bundles (`index.md`) | ✅ | Copies non-`.md` bundle resources |
 | Content | Branch bundles (`_index.md`) | ✅ | Home and nested section list pages |

@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
 import type { int32 as int } from "@tsonic/core/types.js";
+import { encode_url_component, replace_regex } from "@tsonic/rust/crates/tsumo_platform/index.js";
 import { compareText, replaceText, substringCount, substringFrom, trimStartChar } from "../../utils/strings.js";
 import { ensureTrailingSlash, humanizeSlug, slugify } from "../../utils/text.js";
 import { TextBuilder } from "../../utils/text-builder.js";
@@ -157,8 +158,7 @@ export const callScalarFunction = (
     const pattern = toPlainString(args[0]!);
     const replacement = toPlainString(args[1]!);
     const s = toPlainString(args[2]!);
-    const regex = new RegExp(pattern, "g");
-    return new StringValue(s.replace(regex, replacement));
+    return new StringValue(replace_regex(pattern, replacement, s));
   }
 
   if (name === "truncate" && args.length >= 2) {
@@ -216,7 +216,7 @@ export const callScalarFunction = (
   if (name === "urlquery" && args.length >= 1) {
     const v = args[0]!;
     const s = toPlainString(v);
-    return new StringValue(encodeURIComponent(s));
+    return new StringValue(encode_url_component(s));
   }
 
   if (name === "default" && args.length >= 2) {

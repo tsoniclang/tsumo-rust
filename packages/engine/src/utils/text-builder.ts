@@ -1,21 +1,21 @@
 import type { int32 as int } from "@tsonic/core/types.js";
 
 export class TextBuilder {
-  private value: string;
+  #value: string;
 
   constructor() {
-    this.value = "";
+    this.#value = "";
   }
 
   get length(): int {
-    return this.value.length;
+    return this.#value.length;
   }
 
   append(text: string): void {
-    this.value += text;
+    this.#value += text;
   }
 
   toString(): string {
-    return this.value;
+    return this.#value;
   }
 }

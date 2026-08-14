@@ -8,9 +8,9 @@ export const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), ".
 const testRunsRoot = join(repoRoot, ".temp/test-runs");
 
 export function tsumoBinary() {
-  const binary = join(repoRoot, "packages/cli/bin/Debug/net10.0/tsumo");
+  const binary = join(repoRoot, "target/debug/tsumo");
   if (!existsSync(binary)) {
-    throw new Error("Built tsumo CLI not found. Run `npm run build` first.");
+    throw new Error("Built Rust tsumo CLI not found. Run `npm run build` first.");
   }
   return binary;
 }

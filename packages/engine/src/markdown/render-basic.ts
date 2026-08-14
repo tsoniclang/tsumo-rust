@@ -1,8 +1,7 @@
-import { Markdown } from "@tsonic/dotnet/Markdig.js";
 import type { int32 as int } from "@tsonic/core/types.js";
 import { indexOfText, indexOfTextIgnoreCase, replaceLineEndings, substringCount, substringFrom } from "../utils/strings.js";
 import { MarkdownResult } from "./result.js";
-import { markdownPipeline } from "./pipeline.js";
+import { renderMarkdownHtml, renderMarkdownPlainText } from "./platform.js";
 import { generateTableOfContents } from "./toc.js";
 
 export const normalizeNewlines = (text: string): string => replaceLineEndings(text, "\n");
@@ -29,16 +28,16 @@ export const renderMarkdown = (markdownRaw: string): MarkdownResult => {
     const after = substringFrom(markdown, moreIndex + summaryMarkerLength);
     const full = before + after;
     return new MarkdownResult(
-      Markdown.ToHtml(full, markdownPipeline),
-      Markdown.ToHtml(before, markdownPipeline).trim(),
-      Markdown.ToPlainText(full, markdownPipeline),
+      renderMarkdownHtml(full),
+      renderMarkdownHtml(before).trim(),
+      renderMarkdownPlainText(full),
       toc,
     );
   }
 
-  const html = Markdown.ToHtml(markdown, markdownPipeline);
-  const plainText = Markdown.ToPlainText(markdown, markdownPipeline);
+  const html = renderMarkdownHtml(markdown);
+  const plainText = renderMarkdownPlainText(markdown);
   const summarySource = firstBlock(markdown);
-  const summaryHtml = summarySource === "" ? "" : Markdown.ToHtml(summarySource, markdownPipeline).trim();
+  const summaryHtml = summarySource === "" ? "" : renderMarkdownHtml(summarySource).trim();
   return new MarkdownResult(html, summaryHtml, plainText, toc);
 };

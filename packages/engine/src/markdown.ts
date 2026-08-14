@@ -1,7 +1,6 @@
 // Re-export from modularized markdown module
 export {
   MarkdownResult,
-  markdownPipeline,
   generateTableOfContents,
   escapeHtmlText,
   RenderHookContext,
@@ -11,4 +10,6 @@ export {
   createOrdinalTracker,
   renderMarkdown,
   renderMarkdownWithShortcodes,
+  renderMarkdownHtml,
+  renderMarkdownPlainText,
 } from "./markdown/index.js";

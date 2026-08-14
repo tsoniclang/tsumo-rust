@@ -1,33 +1,15 @@
 import { Buffer } from "node:buffer";
-import { readFileSync, writeFileSync } from "node:fs";
-import { Guid } from "@tsonic/dotnet/System.js";
-import { Directory, Path } from "@tsonic/dotnet/System.IO.js";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { extname, join } from "node:path";
 import type { int32 as int } from "@tsonic/core/types.js";
-import { CodecManager, MagicImageProcessor, ProcessImageSettings } from "@tsonic/dotnet/PhotoSauce.MagicScaler.js";
-import type { CodecCollection } from "@tsonic/dotnet/PhotoSauce.MagicScaler.js";
-import { CodecCollectionExtensions as GiflibCodecs } from "@tsonic/dotnet/PhotoSauce.NativeCodecs.Giflib.js";
-import { CodecCollectionExtensions as LibjpegCodecs } from "@tsonic/dotnet/PhotoSauce.NativeCodecs.Libjpeg.js";
-import { CodecCollectionExtensions as LibpngCodecs } from "@tsonic/dotnet/PhotoSauce.NativeCodecs.Libpng.js";
-import { WebpCodec } from "@tsonic/dotnet/PhotoSauce.NativeCodecs.Libwebp.js";
+import { resize_image } from "@tsonic/rust/crates/tsumo_platform/index.js";
 import { createTsumoError } from "../diagnostics.js";
 import { parseInt32 } from "../utils/int32.js";
 import { parseImageDimensions } from "./image-dimensions.js";
 import { resourceMediaTypeForExtension } from "./media-types.js";
 import { Resource, ResourceData } from "./models.js";
 import { splitResourceFileName, splitResourcePath } from "./paths.js";
-
-let imageCodecsRegistered = false;
-
-const ensureImageCodecsRegistered = (): void => {
-  if (imageCodecsRegistered) return;
-  CodecManager.Configure((codecs: CodecCollection) => {
-    LibpngCodecs.UseLibpng(codecs, true);
-    LibjpegCodecs.UseLibjpeg(codecs, true);
-    GiflibCodecs.UseGiflib(codecs, true);
-    WebpCodec.UseLibwebp(codecs, true);
-  });
-  imageCodecsRegistered = true;
-};
 
 class ImageResizeRequest {
   width: int;
@@ -103,27 +85,18 @@ export const resizeImageResource = (resource: Resource, specification: string): 
   }
 
   const sourceName = resource.outputRelPath ?? resource.sourcePath ?? "";
-  const sourceExtension = (Path.GetExtension(sourceName) ?? "").toLowerCase();
+  const sourceExtension = extname(sourceName).toLowerCase();
   if (sourceExtension === "") {
     throw createTsumoError("TSUMO_IMAGE_FORMAT_UNKNOWN", "Image resizing requires a source file format");
   }
   const outputExtension = request.format === undefined ? sourceExtension : `.${request.format}`;
-  const workDirectory = Path.Combine(
-    Path.GetTempPath(),
-    `tsumo-image-${Guid.NewGuid().ToString("n")}`,
-  );
-  Directory.CreateDirectory(workDirectory);
+  const workDirectory = mkdtempSync(join(tmpdir(), "tsumo-image-"));
 
   try {
-    const inputPath = Path.Combine(workDirectory, "input" + sourceExtension);
-    const outputPath = Path.Combine(workDirectory, "output" + outputExtension);
+    const inputPath = join(workDirectory, "input" + sourceExtension);
+    const outputPath = join(workDirectory, "output" + outputExtension);
     writeFileSync(inputPath, resource.bytes);
-    ensureImageCodecsRegistered();
-    const settings = new ProcessImageSettings();
-    settings.Width = width;
-    settings.Height = height;
-    if (request.format !== undefined) settings.TrySetEncoderFormat(outputExtension);
-    MagicImageProcessor.ProcessImage(inputPath, outputPath, settings);
+    resize_image(inputPath, outputPath, width, height, outputExtension.slice(1));
 
     const outputBytes = readFileSync(outputPath);
     let outputWidth: int = width;
@@ -151,6 +124,6 @@ export const resizeImageResource = (resource: Resource, specification: string): 
       outputHeight,
     );
   } finally {
-    if (Directory.Exists(workDirectory)) Directory.Delete(workDirectory, true);
+    rmSync(workDirectory, true);
   }
 };

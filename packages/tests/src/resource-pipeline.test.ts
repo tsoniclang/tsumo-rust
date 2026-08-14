@@ -1,9 +1,6 @@
 import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
-import { attribute } from "@tsonic/core/lang.js";
-import { Assert, FactAttribute } from "@tsonic/dotnet/Xunit.js";
-import { Directory, File, Path } from "@tsonic/dotnet/System.IO.js";
-import { Exception } from "@tsonic/dotnet/System.js";
+import { join } from "node:path";
 
 import {
   createStringResource,
@@ -16,7 +13,14 @@ import {
   ResourceManager,
   TsumoError,
 } from "@tsumo/engine/testing.js";
-import { createTestDirectory, deleteTestDirectory } from "./test-root.js";
+import {
+  Assert,
+  createDirectory,
+  createTestDirectory,
+  deleteTestDirectory,
+  runTest,
+  writeTextFile,
+} from "./test-root.js";
 
 const captureResourceDiagnostic = (operation: () => void): string => {
   try {
@@ -25,30 +29,30 @@ const captureResourceDiagnostic = (operation: () => void): string => {
     if (error instanceof TsumoError) return error.diagnostic.code;
     throw error;
   }
-  throw new Exception("Expected a resource diagnostic");
+  throw new Error("Expected a resource diagnostic");
 };
 
 export class ResourcePipelineTests {
   relative_path_policy_rejects_every_escape_form(): void {
-    Assert.Equal(
+    Assert.StringEqual(
       "TSUMO_RESOURCE_PATH_ESCAPES_ROOT",
       captureResourceDiagnostic(() => {
         normalizeResourceRelativePath("../secret.txt");
       }),
     );
-    Assert.Equal(
+    Assert.StringEqual(
       "TSUMO_RESOURCE_PATH_ESCAPES_ROOT",
       captureResourceDiagnostic(() => {
         normalizeResourceRelativePath("assets/../../secret.txt");
       }),
     );
-    Assert.Equal(
+    Assert.StringEqual(
       "TSUMO_RESOURCE_PATH_ABSOLUTE",
       captureResourceDiagnostic(() => {
         normalizeResourceRelativePath("C:\\secret.txt");
       }),
     );
-    Assert.Equal("images/logo.png", normalizeResourceRelativePath("/images/./logo.png"));
+    Assert.StringEqual("images/logo.png", normalizeResourceRelativePath("/images/./logo.png"));
   }
 
   glob_matching_is_segment_exact(): void {
@@ -87,9 +91,9 @@ export class ResourcePipelineTests {
       20,
     );
     const fingerprinted = fingerprintResource(source);
-    Assert.Equal("text/css", fingerprinted.mediaType);
-    Assert.Equal(10, fingerprinted.width);
-    Assert.Equal(20, fingerprinted.height);
+    Assert.StringEqual("text/css", fingerprinted.mediaType);
+    Assert.NumberEqual(10, fingerprinted.width);
+    Assert.NumberEqual(20, fingerprinted.height);
     const expectedHash = createHash("sha256").update(source.bytes).digest("hex").slice(0, 16);
     Assert.True(fingerprinted.outputRelPath === `css/site.${expectedHash}.css`);
     Assert.True(fingerprinted.Data.Integrity.startsWith("sha256-"));
@@ -97,33 +101,46 @@ export class ResourcePipelineTests {
 
   resource_lookup_is_sorted_and_site_assets_override_theme_assets(): void {
     const root = createTestDirectory("resources");
-    const siteDir = Path.Combine(root, "site");
-    const themeDir = Path.Combine(root, "theme");
-    const outputDir = Path.Combine(root, "output");
+    const siteDir = join(root, "site");
+    const themeDir = join(root, "theme");
+    const outputDir = join(root, "output");
     try {
-      Directory.CreateDirectory(Path.Combine(siteDir, "assets"));
-      Directory.CreateDirectory(Path.Combine(themeDir, "assets"));
-      File.WriteAllText(Path.Combine(siteDir, "assets", "z.txt"), "site-z");
-      File.WriteAllText(Path.Combine(siteDir, "assets", "a.txt"), "site-a");
-      File.WriteAllText(Path.Combine(themeDir, "assets", "a.txt"), "theme-a");
-      File.WriteAllText(Path.Combine(themeDir, "assets", "m.txt"), "theme-m");
+      createDirectory(join(siteDir, "assets"));
+      createDirectory(join(themeDir, "assets"));
+      writeTextFile(join(siteDir, "assets", "z.txt"), "site-z");
+      writeTextFile(join(siteDir, "assets", "a.txt"), "site-a");
+      writeTextFile(join(themeDir, "assets", "a.txt"), "theme-a");
+      writeTextFile(join(themeDir, "assets", "m.txt"), "theme-m");
 
       const manager = new ResourceManager(siteDir, themeDir, outputDir);
       const matched = manager.match("*.txt");
-      Assert.Equal(3, matched.length);
+      Assert.NumberEqual(3, matched.length);
       Assert.True(matched[0]!.outputRelPath === "a.txt");
       Assert.True(matched[1]!.outputRelPath === "m.txt");
       Assert.True(matched[2]!.outputRelPath === "z.txt");
       Assert.True(matched[0]!.text === "site-a");
-      Assert.Equal(3, manager.byType("text").length);
+      Assert.NumberEqual(3, manager.byType("text").length);
     } finally {
       deleteTestDirectory(root);
     }
   }
 }
 
-attribute<ResourcePipelineTests>().method((target) => target.relative_path_policy_rejects_every_escape_form).add(FactAttribute);
-attribute<ResourcePipelineTests>().method((target) => target.glob_matching_is_segment_exact).add(FactAttribute);
-attribute<ResourcePipelineTests>().method((target) => target.image_dimensions_are_read_from_exact_file_signatures).add(FactAttribute);
-attribute<ResourcePipelineTests>().method((target) => target.transform_identity_and_metadata_are_content_exact).add(FactAttribute);
-attribute<ResourcePipelineTests>().method((target) => target.resource_lookup_is_sorted_and_site_assets_override_theme_assets).add(FactAttribute);
+export const runResourcePipelineTests = (): void => {
+  const tests = new ResourcePipelineTests();
+  runTest("relative path policy rejects every escape form", () => {
+    tests.relative_path_policy_rejects_every_escape_form();
+  });
+  runTest("glob matching is segment exact", () => {
+    tests.glob_matching_is_segment_exact();
+  });
+  runTest("image dimensions are read from exact file signatures", () => {
+    tests.image_dimensions_are_read_from_exact_file_signatures();
+  });
+  runTest("transform identity and metadata are content exact", () => {
+    tests.transform_identity_and_metadata_are_content_exact();
+  });
+  runTest("resource lookup is sorted and site assets override theme assets", () => {
+    tests.resource_lookup_is_sorted_and_site_assets_override_theme_assets();
+  });
+};

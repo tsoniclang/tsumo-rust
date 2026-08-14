@@ -264,7 +264,11 @@ test("CLI failure paths exit non-zero with usage output", () => {
 
   const help = runTsumo(["--help"]);
   assert.equal(help.status, 0);
-  assert.match(help.stdout, /USAGE/u);
+  assert.equal((help.stdout.match(/USAGE:/gu) ?? []).length, 1);
+
+  const version = runTsumo(["--version"]);
+  assert.equal(version.status, 0);
+  assert.equal(version.stdout, "0.0.0\n");
 
   const unknownBuildOption = runTsumo(["build", "--wat"]);
   assert.equal(unknownBuildOption.status, 2);

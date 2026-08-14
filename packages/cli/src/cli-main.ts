@@ -11,7 +11,7 @@ import { handleServe } from "./commands/handle-serve.js";
 
 const VERSION = "0.0.0";
 
-export function main(): void {
+function run(): void {
   const args = process.argv.slice(2);
 
   let first = "";
@@ -54,9 +54,11 @@ export function main(): void {
   handleBuild(args, buildArgStart);
 }
 
-try {
-  main();
-} catch (error) {
-  logErrorLine(error instanceof TsumoError ? error.diagnostic.format() : `${error}`);
-  process.exitCode = 1;
+export function main(): void {
+  try {
+    run();
+  } catch (error) {
+    logErrorLine(error instanceof TsumoError ? error.diagnostic.format() : `${error}`);
+    process.exitCode = 1;
+  }
 }

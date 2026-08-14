@@ -1,99 +1,68 @@
 # Getting started
 
-## Build tsumo from source
+## Build from source
 
-Source builds use workspace `file:` dependencies that expect sibling checkouts
-of:
-
-- `../tsonic`
-- `../tsonic-csharp`
-- `../csharp-runtime`
-- `../csharp-js`
-- `../csharp-nodejs`
-
-From the `tsumo` repo root:
+Install Node.js 22+, npm, and the stable Rust toolchain. The repository expects
+the sibling Tsonic and Rust target/runtime checkouts listed in the root README.
 
 ```bash
 npm install
 npm run build
 ```
 
-`npm run build` prepares the provider reference assemblies, runs `tsonic build`
-for each project (emitting C# under each package's ignored `out/csharp/`), and
-then builds the user-owned `.csproj` projects with `dotnet build`. The CLI
-binary is produced at:
+Tsonic first checks the authored TypeScript and emits Rust under the ignored
+`packages/*/out/rust` directories. Cargo then builds the single locked
+workspace. The resulting executable is:
 
-- `./packages/cli/bin/Debug/net10.0/tsumo`
-
-NativeAOT publish:
-
-```bash
-npm run -w tsumo-cli publish:aot
-./packages/cli/bin/Release/net10.0/linux-x64/publish/tsumo --help
+```text
+target/debug/tsumo
 ```
 
-## Quick start: create and serve a site
+Run the complete reproducible gate before publishing changes:
 
 ```bash
-./packages/cli/bin/Debug/net10.0/tsumo new site ./my-site
-./packages/cli/bin/Debug/net10.0/tsumo server --source ./my-site
+npm run verify-all
 ```
 
-Create a new page under `content/`:
+## Quick start
 
 ```bash
-./packages/cli/bin/Debug/net10.0/tsumo new posts/first-post.md --source ./my-site
+target/debug/tsumo new site ./my-site
+target/debug/tsumo new posts/first-post.md --source ./my-site
+target/debug/tsumo build --source ./my-site --destination ./public
+target/debug/tsumo server --source ./my-site
 ```
 
-Build a static site:
+## Included examples
 
 ```bash
-./packages/cli/bin/Debug/net10.0/tsumo build --source ./my-site --destination public
-```
-
-## Try the included examples
-
-Blog example:
-
-```bash
-./packages/cli/bin/Debug/net10.0/tsumo build --source ./examples/basic-blog
-./packages/cli/bin/Debug/net10.0/tsumo server --source ./examples/basic-blog
-```
-
-Docs example (requires you to point mounts at real docs folders):
-
-```bash
-./packages/cli/bin/Debug/net10.0/tsumo build --source ./examples/docs-site
-./packages/cli/bin/Debug/net10.0/tsumo server --source ./examples/docs-site
+target/debug/tsumo build --source ./examples/basic-blog
+target/debug/tsumo server --source ./examples/basic-blog
+target/debug/tsumo build --source ./examples/docs-site
 ```
 
 ## Themes
 
-tsumo resolves themes like Hugo:
-
-- If you pass `--themesDir <dir>`, it looks for `<themesDir>/<themeName>`.
-- Otherwise it looks for `themes/<themeName>` under your site directory.
-
-Set the theme name in `hugo.toml` (or `config.*`):
+Set a theme in `hugo.toml`, `hugo.yaml`, or `hugo.json`. By default Tsumo
+resolves it under the site's `themes` directory; `--themesDir` selects an
+explicit parent directory.
 
 ```toml
 theme = "hugo-book"
 ```
 
-Then build with a themes directory (example):
-
 ```bash
-./packages/cli/bin/Debug/net10.0/tsumo build -s ./my-site --themesDir /path/to/hugo-themes
+target/debug/tsumo build --source ./my-site --themesDir /path/to/hugo-themes
 ```
 
-## Assets (Sass)
+## Sass
 
-Some Hugo themes require the Sass pipeline (`css.Sass`). tsumo shells out to a Sass executable.
-
-- Install Dart Sass (`sass` CLI), or set `TSUMO_SASS` to the full path of a Sass executable.
-
-Example:
+Sass execution is an explicit external tool boundary. Set `TSUMO_SASS` to the
+desired executable or make `sass` available on `PATH`:
 
 ```bash
-TSUMO_SASS=$(which sass) ./packages/cli/bin/Debug/net10.0/tsumo build -s ./my-site
+TSUMO_SASS=/opt/dart-sass/sass target/debug/tsumo build --source ./my-site
 ```
+
+Missing or failing Sass commands produce a deterministic build diagnostic; the
+engine does not fall back to another implementation.

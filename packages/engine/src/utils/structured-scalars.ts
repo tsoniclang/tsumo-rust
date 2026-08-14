@@ -3,7 +3,13 @@ import type { int32 as int } from "@tsonic/core/types.js";
 import type { TsumoError } from "../diagnostics.js";
 import { ParamValue } from "../params.js";
 import { parseInt32 } from "./int32.js";
-import { indexOfText, substringCount, substringFrom } from "./strings.js";
+import {
+  codePointAtText,
+  indexOfText,
+  nextCodePointIndex,
+  substringCount,
+  substringFrom,
+} from "./strings.js";
 
 export type StructuredScalarFormat = "toml" | "yaml";
 export type StructuredScalarErrorFactory = (message: string) => TsumoError;
@@ -35,8 +41,8 @@ const decodeSingleQuoted = (
   invalid: StructuredScalarErrorFactory,
 ): string => {
   let result = "";
-  for (let index: int = 0; index < inner.length; index++) {
-    const current = inner[index]!;
+  for (let index: int = 0; index < inner.length; index = nextCodePointIndex(inner, index)) {
+    const current = codePointAtText(inner, index);
     if (current !== "'") {
       result += current;
       continue;
@@ -53,15 +59,16 @@ const decodeSingleQuoted = (
 
 const decodeDoubleQuoted = (inner: string, invalid: StructuredScalarErrorFactory): string => {
   let result = "";
-  for (let index: int = 0; index < inner.length; index++) {
-    const current = inner[index]!;
+  for (let index: int = 0; index < inner.length; index = nextCodePointIndex(inner, index)) {
+    const current = codePointAtText(inner, index);
     if (current === "\"") throw invalid("Double-quoted string contains an unescaped quote");
     if (current !== "\\") {
       result += current;
       continue;
     }
     if (index + 1 >= inner.length) throw invalid("String ends with an incomplete escape");
-    const escaped = inner[++index]!;
+    index = nextCodePointIndex(inner, index);
+    const escaped = codePointAtText(inner, index);
     if (escaped === "\"" || escaped === "\\" || escaped === "/") result += escaped;
     else if (escaped === "b") result += "\b";
     else if (escaped === "t") result += "\t";
@@ -84,14 +91,23 @@ const decodeQuoted = (
   format: StructuredScalarFormat,
   invalid: StructuredScalarErrorFactory,
 ): string | undefined => {
-  const first = value.length === 0 ? "" : value[0]!;
-  const last = value.length === 0 ? "" : value[value.length - 1]!;
-  const startsQuoted = first === "\"" || first === "'";
-  const endsQuoted = last === "\"" || last === "'";
+  const startsDoubleQuoted = value.startsWith("\"");
+  const startsSingleQuoted = value.startsWith("'");
+  const endsDoubleQuoted = value.endsWith("\"");
+  const endsSingleQuoted = value.endsWith("'");
+  const startsQuoted = startsDoubleQuoted || startsSingleQuoted;
+  const endsQuoted = endsDoubleQuoted || endsSingleQuoted;
   if (!startsQuoted && !endsQuoted) return undefined;
-  if (!startsQuoted || first !== last || value.length < 2) throw invalid("String has mismatched quotes");
+  if (
+    !startsQuoted
+    || (startsDoubleQuoted && !endsDoubleQuoted)
+    || (startsSingleQuoted && !endsSingleQuoted)
+    || value.length < 2
+  ) {
+    throw invalid("String has mismatched quotes");
+  }
   const inner = substringCount(value, 1, value.length - 2);
-  return first === "'" ? decodeSingleQuoted(inner, format, invalid) : decodeDoubleQuoted(inner, invalid);
+  return startsSingleQuoted ? decodeSingleQuoted(inner, format, invalid) : decodeDoubleQuoted(inner, invalid);
 };
 
 const parseInteger = (value: string, invalid: StructuredScalarErrorFactory): ParamValue | undefined => {
@@ -132,14 +148,17 @@ export const parseStructuredScalar = (
 export const stripStructuredComment = (line: string, format: StructuredScalarFormat): string => {
   let quote = "";
   let escaped = false;
-  for (let index: int = 0; index < line.length; index++) {
-    const current = line[index]!;
+  let previousWasWhitespace = false;
+  for (let index: int = 0; index < line.length; index = nextCodePointIndex(line, index)) {
+    const current = codePointAtText(line, index);
     if (escaped) {
       escaped = false;
+      previousWasWhitespace = /\s/.test(current);
       continue;
     }
     if (quote === "\"" && current === "\\") {
       escaped = true;
+      previousWasWhitespace = false;
       continue;
     }
     if (current === "\"" || current === "'") {
@@ -148,12 +167,14 @@ export const stripStructuredComment = (line: string, format: StructuredScalarFor
         if (quote === "'" && format === "yaml" && index + 1 < line.length && line[index + 1] === "'") index++;
         else quote = "";
       }
+      previousWasWhitespace = false;
       continue;
     }
-    const yamlComment = format === "yaml" && current === "#" && (index === 0 || /\s/.test(line[index - 1]!));
+    const yamlComment = format === "yaml" && current === "#" && (index === 0 || previousWasWhitespace);
     if ((format === "toml" && current === "#" && quote === "") || (yamlComment && quote === "")) {
       return substringCount(line, 0, index).trimEnd();
     }
+    previousWasWhitespace = /\s/.test(current);
   }
   return line;
 };

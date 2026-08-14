@@ -1,0 +1,12 @@
+[workspace]
+members = [
+  "crates/tsumo_platform",
+  "packages/engine",
+  "packages/cli",
+  "packages/tests",
+]
+resolver = "2"
+
+[patch.crates-io]
+tsonic_rust_js = { path = "../rust-js/crates/tsonic_rust_js" }
+tsonic_rust_runtime = { path = "../rust-runtime/crates/tsonic_rust_runtime" }
