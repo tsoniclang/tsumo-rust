@@ -1,0 +1,13 @@
+[package]
+name = "tsumo_engine"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "out/rust/src/lib.rs"
+
+[dependencies]
+tsonic_rust_js = { path = "../../../rust-js/crates/tsonic_rust_js" }
+tsonic_rust_node = { path = "../../../rust-nodejs/rust/crates/tsonic_rust_node" }
+tsonic_rust_runtime = { path = "../../../rust-runtime/crates/tsonic_rust_runtime" }
+tsumo_platform = { package = "tsumo-platform", path = "../../crates/tsumo_platform" }
