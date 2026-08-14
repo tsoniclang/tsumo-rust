@@ -2,7 +2,7 @@ import { Buffer } from "node:buffer";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, resolve, sep } from "node:path";
 import { setInterval } from "node:timers";
-import type { int32 as int } from "@tsonic/core/types.js";
+import type { int32 } from "@tsonic/core/types.js";
 import { buildSite } from "./build-site.js";
 import { loadDocsConfig } from "./docs/config.js";
 import { fileExists, readBinaryFile, readTextFile } from "./fs.js";
@@ -20,13 +20,13 @@ const logErrorLine = (message: string): void => {
   console.error(message);
 };
 
-const sendText = (response: ServerResponse, statusCode: int, contentType: string, body: string): void => {
+const sendText = (response: ServerResponse, statusCode: int32, contentType: string, body: string): void => {
   response.statusCode = statusCode;
   response.setHeader("Content-Type", contentType);
   response.end(body);
 };
 
-const sendBytes = (response: ServerResponse, statusCode: int, contentType: string, bytes: Buffer): void => {
+const sendBytes = (response: ServerResponse, statusCode: int32, contentType: string, bytes: Buffer): void => {
   response.statusCode = statusCode;
   response.setHeader("Content-Type", contentType);
   response.end(bytes);
@@ -147,7 +147,7 @@ const startWatchLoop = (req: ServeRequest, onRebuild: (outputDir: string) => voi
     } finally {
       rebuilding = false;
     }
-  }, 250 as int);
+  }, 250 as int32);
 };
 
 export const serveSite = (req: ServeRequest): void => {

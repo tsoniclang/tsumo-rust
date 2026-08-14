@@ -1,4 +1,4 @@
-import type { int32 as int } from "@tsonic/core/types.js";
+import type { int32 } from "@tsonic/core/types.js";
 import { createTsumoError } from "../../diagnostics.js";
 import { PageContext } from "../../models.js";
 import { substringFrom } from "../../utils/strings.js";

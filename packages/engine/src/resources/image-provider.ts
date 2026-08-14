@@ -2,7 +2,7 @@ import { Buffer } from "node:buffer";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { extname, join } from "node:path";
-import type { int32 as int } from "@tsonic/core/types.js";
+import type { int32 } from "@tsonic/core/types.js";
 import { resize_image } from "@tsonic/rust/crates/tsumo_platform/index.js";
 import { createTsumoError } from "../diagnostics.js";
 import { parseInt32 } from "../utils/int32.js";
@@ -12,18 +12,18 @@ import { Resource, ResourceData } from "./models.js";
 import { splitResourceFileName, splitResourcePath } from "./paths.js";
 
 class ImageResizeRequest {
-  width: int;
-  height: int;
+  width: int32;
+  height: int32;
   format: string | undefined;
 
-  constructor(width: int, height: int, format: string | undefined) {
+  constructor(width: int32, height: int32, format: string | undefined) {
     this.width = width;
     this.height = height;
     this.format = format;
   }
 }
 
-const parsePositiveDimension = (value: string, spec: string): int => {
+const parsePositiveDimension = (value: string, spec: string): int32 => {
   if (value === "") return 0;
   const parsed = parseInt32(value);
   if (parsed === undefined || parsed <= 0) {
@@ -40,8 +40,8 @@ const parseImageResizeRequest = (spec: string): ImageResizeRequest => {
 
   const dimensions = tokens[0]!;
   const separator = dimensions.indexOf("x");
-  let width: int;
-  let height: int;
+  let width: int32;
+  let height: int32;
   if (separator < 0) {
     width = parsePositiveDimension(dimensions, spec);
     height = 0;
@@ -70,8 +70,8 @@ const parseImageResizeRequest = (spec: string): ImageResizeRequest => {
 
 export const resizeImageResource = (resource: Resource, specification: string): Resource => {
   const request = parseImageResizeRequest(specification);
-  let width: int = request.width;
-  let height: int = request.height;
+  let width: int32 = request.width;
+  let height: int32 = request.height;
   if (width === 0 && resource.width > 0 && resource.height > 0) {
     width = (resource.width * height) / resource.height;
   } else if (height === 0 && resource.width > 0 && resource.height > 0) {
@@ -99,8 +99,8 @@ export const resizeImageResource = (resource: Resource, specification: string): 
     resize_image(inputPath, outputPath, width, height, outputExtension.slice(1));
 
     const outputBytes = readFileSync(outputPath);
-    let outputWidth: int = width;
-    let outputHeight: int = height;
+    let outputWidth: int32 = width;
+    let outputHeight: int32 = height;
     const dimensions = parseImageDimensions(outputBytes);
     if (dimensions !== undefined) {
       outputWidth = dimensions.width;

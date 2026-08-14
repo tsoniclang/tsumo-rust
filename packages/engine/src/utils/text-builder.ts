@@ -1,4 +1,4 @@
-import type { int32 as int } from "@tsonic/core/types.js";
+import type { int32 } from "@tsonic/core/types.js";
 
 export class TextBuilder {
   #value: string;
@@ -7,7 +7,7 @@ export class TextBuilder {
     this.#value = "";
   }
 
-  get length(): int {
+  get length(): int32 {
     return this.#value.length;
   }
 

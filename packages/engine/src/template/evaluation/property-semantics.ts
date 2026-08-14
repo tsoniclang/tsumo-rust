@@ -1,4 +1,4 @@
-import type { int32 as int } from "@tsonic/core/types.js";
+import type { int32 } from "@tsonic/core/types.js";
 import { LanguageContext, MediaType, PageContext, SiteContext } from "../../models.js";
 import type { DocsMountContext, NavItem } from "../../docs/models.js";
 import { ParamKind, ParamValue } from "../../params.js";
@@ -92,7 +92,7 @@ export const resolvePath = (value: TemplateValue, segments: string[], scope: Ren
         const parentPage = page.parent;
         if (parentPage !== undefined) {
           const siblings = copyPageArray(parentPage.pages);
-          let foundIdx: int = -1;
+          let foundIdx: int32 = -1;
           for (let pi = 0; pi < siblings.length; pi++) {
             const sibling = siblings[pi]!;
             if (sibling.relPermalink === page.relPermalink) {
@@ -101,7 +101,7 @@ export const resolvePath = (value: TemplateValue, segments: string[], scope: Ren
             }
           }
           if (foundIdx > 0) {
-            const prevIdx: int = foundIdx - 1;
+            const prevIdx: int32 = foundIdx - 1;
             cur = new PageValue(siblings[prevIdx]!);
           } else {
             cur = nil;
@@ -114,7 +114,7 @@ export const resolvePath = (value: TemplateValue, segments: string[], scope: Ren
         const parentPage = page.parent;
         if (parentPage !== undefined) {
           const siblings = copyPageArray(parentPage.pages);
-          let foundIdx: int = -1;
+          let foundIdx: int32 = -1;
           for (let ni = 0; ni < siblings.length; ni++) {
             const sibling = siblings[ni]!;
             if (sibling.relPermalink === page.relPermalink) {
@@ -123,7 +123,7 @@ export const resolvePath = (value: TemplateValue, segments: string[], scope: Ren
             }
           }
           if (foundIdx >= 0 && foundIdx < siblings.length - 1) {
-            const nextIdx: int = foundIdx + 1;
+            const nextIdx: int32 = foundIdx + 1;
             cur = new PageValue(siblings[nextIdx]!);
           } else {
             cur = nil;

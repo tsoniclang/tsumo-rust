@@ -1,7 +1,7 @@
 import { Buffer } from "node:buffer";
 import { cwd } from "node:process";
 import { dirname, extname, isAbsolute, relative, resolve, sep } from "node:path";
-import type { int32 as int } from "@tsonic/core/types.js";
+import type { int32 } from "@tsonic/core/types.js";
 import { HtmlString } from "../../utils/html.js";
 import { fileExists, listFilesRecursive, readBinaryFile } from "../../fs.js";
 import { replaceText, substringCount, substringFrom } from "../../utils/strings.js";
@@ -284,7 +284,7 @@ export const callContextFunction = (
           const targetPage = (target as PageValue).value;
           const vals = items;
 
-          let idx: int = -1;
+          let idx: int32 = -1;
           for (let i = 0; i < vals.length; i++) {
             const cur = vals[i]!;
             if (cur instanceof PageValue && (cur as PageValue).value === targetPage) {

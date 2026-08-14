@@ -1,5 +1,5 @@
 import { join, resolve } from "node:path";
-import type { int32 as int } from "@tsonic/core/types.js";
+import type { int32 } from "@tsonic/core/types.js";
 import { combineUrl, renderWithBase, resolveThemeDir, selectTemplate } from "../build/layout.js";
 import { SiteOutputPlan } from "../build/output-plan.js";
 import { loadSiteConfig } from "../config.js";
@@ -35,7 +35,7 @@ import {
 } from "./routes.js";
 import { renderSearchIndexJson, SearchDocument } from "./search-index.js";
 
-export const buildDocsSite = (request: BuildRequest, docsLoaded: LoadedDocsConfig, outDir: string): int => {
+export const buildDocsSite = (request: BuildRequest, docsLoaded: LoadedDocsConfig, outDir: string): int32 => {
   const siteDir = resolve(request.siteDir);
   const loaded = loadSiteConfig(siteDir);
   const config = loaded.config;

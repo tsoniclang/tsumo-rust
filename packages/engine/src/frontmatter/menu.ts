@@ -1,9 +1,9 @@
-import type { int32 as int } from "@tsonic/core/types.js";
+import type { int32 } from "@tsonic/core/types.js";
 
 export class FrontMatterMenu {
   menu: string;
   name: string;
-  weight: int;
+  weight: int32;
   parent: string;
   identifier: string;
   pre: string;

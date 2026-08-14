@@ -1,5 +1,5 @@
 import { isAbsolute, join, relative } from "node:path";
-import type { int32 as int } from "@tsonic/core/types.js";
+import type { int32 } from "@tsonic/core/types.js";
 import { DocsMountConfig, NavItem } from "./models.js";
 import { createTsumoError } from "../diagnostics.js";
 import { fileExists, readTextFile } from "../fs.js";
@@ -149,10 +149,10 @@ const parseInlineMarkdownLink = (line: string): InlineLink | undefined => {
 
 class NavGroupBuild {
   title: string;
-  order: int;
+  order: int32;
   children: NavItem[];
 
-  constructor(title: string, order: int) {
+  constructor(title: string, order: int32) {
     this.title = title;
     this.order = order;
     const empty: NavItem[] = [];
@@ -172,7 +172,7 @@ const parseTocMarkdown = (
   const groups: NavGroupBuild[] = [];
   const rootItems: NavItem[] = [];
   let currentGroup: NavGroupBuild | undefined = undefined;
-  let order: int = 1;
+  let order: int32 = 1;
 
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i]!;
@@ -257,7 +257,7 @@ function parseNavJsonItems(
   }
 
   const items: NavItem[] = [];
-  let order: int = 1;
+  let order: int32 = 1;
   for (let itemIndex = 0; itemIndex < value.items.length; itemIndex++) {
     const current = value.items[itemIndex]!;
     if (!(current instanceof JsonObject)) continue;

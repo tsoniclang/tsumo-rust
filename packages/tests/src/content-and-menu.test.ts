@@ -1,4 +1,4 @@
-import type { int32 as int } from "@tsonic/core/types.js";
+import type { int32 } from "@tsonic/core/types.js";
 import { join } from "node:path";
 import {
   buildMenuHierarchy,
@@ -35,7 +35,7 @@ const captureContentDiagnostic = (operation: () => void): string => {
   throw new Error("Expected a content or menu diagnostic");
 };
 
-const createMenuEntry = (identity: string, parent: string, weight: int, pageRef: string): MenuEntry =>
+const createMenuEntry = (identity: string, parent: string, weight: int32, pageRef: string): MenuEntry =>
   new MenuEntry(identity, "", pageRef, "", weight, parent, identity, "", "", "main");
 
 const createPage = (site: SiteContext, route: string, slug: string): PageContext => {

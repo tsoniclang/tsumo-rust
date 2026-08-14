@@ -1,4 +1,4 @@
-import type { int32 as int } from "@tsonic/core/types.js";
+import type { int32 } from "@tsonic/core/types.js";
 import { MarkdownResult, renderMarkdownPlainText } from "../markdown.js";
 import { createMarkdownDocument } from "../markdown/platform.js";
 import { createTsumoError } from "../diagnostics.js";
@@ -174,7 +174,7 @@ const normalizeNewlines = (text: string): string => replaceLineEndings(text, "\n
 const summaryMarker = "<!--more-->";
 const summaryMarkerLength = summaryMarker.length;
 
-const findSummaryDividerIndex = (markdown: string): int => indexOfTextIgnoreCase(markdown, summaryMarker);
+const findSummaryDividerIndex = (markdown: string): int32 => indexOfTextIgnoreCase(markdown, summaryMarker);
 
 const firstBlock = (markdown: string): string => {
   const text = markdown.trim();
@@ -185,8 +185,8 @@ const firstBlock = (markdown: string): string => {
 
 const renderWithRewrites = (markdown: string, ctx: DocsLinkRewriteContext): string => {
   const document = createMarkdownDocument(markdown);
-  const count: int = document.occurrence_count();
-  for (let index: int = 0; index < count; index++) {
+  const count: int32 = document.occurrence_count();
+  for (let index: int32 = 0; index < count; index++) {
     const occurrence = document.occurrence(index);
     if (occurrence.kind !== "link" && occurrence.kind !== "image") continue;
     const updated = maybeRewriteUrl(occurrence.destination, ctx);

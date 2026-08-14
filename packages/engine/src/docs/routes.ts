@@ -1,5 +1,5 @@
 import { relative } from "node:path";
-import type { int32 as int } from "@tsonic/core/types.js";
+import type { int32 } from "@tsonic/core/types.js";
 import { createTsumoError } from "../diagnostics.js";
 import { dirExists, listFilesRecursive } from "../fs.js";
 import { compareText, substringCount, trimEndChar, trimStartChar } from "../utils/strings.js";

@@ -1,6 +1,6 @@
 import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
-import type { int32 as int } from "@tsonic/core/types.js";
+import type { int32 } from "@tsonic/core/types.js";
 import { encode_url_component, replace_regex } from "@tsonic/rust/crates/tsumo_platform/index.js";
 import { compareText, replaceText, substringCount, substringFrom, trimStartChar } from "../../utils/strings.js";
 import { ensureTrailingSlash, humanizeSlug, slugify } from "../../utils/text.js";
@@ -26,7 +26,7 @@ export const callScalarFunction = (
 ): TemplateValue | undefined => {
   const scope = context.scope;
   if (name === "add" && args.length >= 2) {
-    let sum: int = 0;
+    let sum: int32 = 0;
     for (let i = 0; i < args.length; i++) {
       const v = args[i]!;
       const s = toPlainString(v);
@@ -166,7 +166,7 @@ export const callScalarFunction = (
     const s = toPlainString(args[1]!);
     const ellipsis = args.length >= 3 ? toPlainString(args[2]!) : "...";
     if (s.length <= length) return new StringValue(s);
-    const truncLen: int = length - ellipsis.length;
+    const truncLen: int32 = length - ellipsis.length;
     if (truncLen <= 0) return new StringValue(substringCount(ellipsis, 0, length));
     return new StringValue(substringCount(s, 0, truncLen) + ellipsis);
   }
@@ -228,31 +228,31 @@ export const callScalarFunction = (
   if (name === "len" && args.length >= 1) {
     const v = args[0]!;
     if (v instanceof StringValue) {
-      const l: int = v.value.length;
+      const l: int32 = v.value.length;
       return new NumberValue(l);
     }
     if (v instanceof HtmlValue) {
-      const l: int = v.value.value.length;
+      const l: int32 = v.value.value.length;
       return new NumberValue(l);
     }
     if (v instanceof PageArrayValue) {
-      const l: int = v.value.length;
+      const l: int32 = v.value.length;
       return new NumberValue(l);
     }
     if (v instanceof StringArrayValue) {
-      const l: int = v.value.length;
+      const l: int32 = v.value.length;
       return new NumberValue(l);
     }
     if (v instanceof SitesArrayValue) {
-      const l: int = v.value.length;
+      const l: int32 = v.value.length;
       return new NumberValue(l);
     }
     if (v instanceof DocsMountArrayValue) {
-      const l: int = v.value.length;
+      const l: int32 = v.value.length;
       return new NumberValue(l);
     }
     if (v instanceof NavArrayValue) {
-      const l: int = v.value.length;
+      const l: int32 = v.value.length;
       return new NumberValue(l);
     }
     if (v instanceof DictValue) {

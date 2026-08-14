@@ -1,4 +1,4 @@
-import type { int32 as int } from "@tsonic/core/types.js";
+import type { int32 } from "@tsonic/core/types.js";
 
 export class DocsMountConfig {
   name: string;
@@ -59,7 +59,7 @@ export class NavItem {
   children: NavItem[];
   isSection: boolean;
   isCurrent: boolean;
-  order: int;
+  order: int32;
 
   constructor(
     title: string,
@@ -67,7 +67,7 @@ export class NavItem {
     children: NavItem[],
     isSection: boolean,
     isCurrent: boolean,
-    order: int,
+    order: int32,
   ) {
     this.title = title;
     this.url = url;

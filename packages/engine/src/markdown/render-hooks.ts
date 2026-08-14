@@ -1,4 +1,4 @@
-import type { int32 as int } from "@tsonic/core/types.js";
+import type { int32 } from "@tsonic/core/types.js";
 import type { TemplateEnvironment } from "../template/environment.js";
 import type { TemplateNode } from "../template/nodes.js";
 import type { Template } from "../template/template.js";
@@ -51,8 +51,8 @@ export const renderMarkdownWithHooks = (
   const document = createMarkdownDocument(markdown);
   if (!context.hasAnyHooks()) return document.render();
 
-  const count: int = document.occurrence_count();
-  for (let index: int = count - 1; index >= 0; index--) {
+  const count: int32 = document.occurrence_count();
+  for (let index: int32 = count - 1; index >= 0; index--) {
     const occurrence = document.occurrence(index);
     if (occurrence.kind === "image") {
       const template = context.imageHook;
