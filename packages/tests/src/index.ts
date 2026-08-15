@@ -17,6 +17,6 @@ export function main(): void {
   runOutputPlanTests();
   runResourcePipelineTests();
   runTemplateRuntimeTests();
-  completeTests(40);
+  completeTests(54);
   return;
 }
