@@ -4,6 +4,7 @@ import { replaceLineEndings, substringCount } from "../utils/strings.js";
 import { TextBuilder } from "../utils/text-builder.js";
 import { resourceMediaTypeForExtension } from "./media-types.js";
 import { Resource, ResourceData } from "./models.js";
+import { readResourceText } from "./text.js";
 import {
   normalizeResourceRelativePath,
   splitResourceFileName,
@@ -19,10 +20,8 @@ export const concatenateResources = (targetPath: string, resources: Resource[]):
   for (let index = 0; index < resources.length; index++) {
     const resource = resources[index]!;
     identity.append("|" + resource.id);
-    if (resource.text !== undefined) {
-      if (text.length > 0) text.append("\n");
-      text.append(resource.text);
-    }
+    if (text.length > 0) text.append("\n");
+    text.append(readResourceText(resource, "resources.Concat"));
   }
 
   const content = text.toString();
@@ -42,35 +41,24 @@ export const concatenateResources = (targetPath: string, resources: Resource[]):
 
 export const createStringResource = (name: string, content: string): Resource => {
   const normalizedName = normalizeResourceRelativePath(name);
+  const path = splitResourcePath(normalizedName);
+  const file = splitResourceFileName(path.fileName);
   const contentHash = createHash("sha256").update(Buffer.from(content, "utf8")).digest("hex");
   return new Resource(
     `fromString:${normalizedName}:${contentHash}`,
     undefined,
-    false,
-    undefined,
+    true,
+    normalizedName,
     Buffer.from(content, "utf8"),
     content,
     new ResourceData(""),
+    resourceMediaTypeForExtension(file.extension),
   );
 };
 
 export const minifyResource = (resource: Resource): Resource => {
   const identity = `${resource.id}|minify`;
-  const resourceText = resource.text;
-  if (resourceText === undefined) {
-    return new Resource(
-      identity,
-      resource.sourcePath,
-      resource.publishable,
-      resource.outputRelPath,
-      resource.bytes,
-      undefined,
-      resource.Data,
-      resource.mediaType,
-      resource.width,
-      resource.height,
-    );
-  }
+  const resourceText = readResourceText(resource, "resources.Minify");
 
   const lines = replaceLineEndings(resourceText, "\n").split("\n");
   const output = new TextBuilder();

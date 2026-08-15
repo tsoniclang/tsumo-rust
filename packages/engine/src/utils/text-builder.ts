@@ -1,21 +1,22 @@
 import type { int32 } from "@tsonic/core/types.js";
+import { TextBuilderState } from "@tsonic/rust/crates/tsumo_platform/index.js";
 
 export class TextBuilder {
-  #value: string;
+  #state: TextBuilderState;
 
   constructor() {
-    this.#value = "";
+    this.#state = new TextBuilderState();
   }
 
   get length(): int32 {
-    return this.#value.length;
+    return this.#state.length();
   }
 
   append(text: string): void {
-    this.#value += text;
+    this.#state.append(text);
   }
 
   toString(): string {
-    return this.#value;
+    return this.#state.snapshot();
   }
 }

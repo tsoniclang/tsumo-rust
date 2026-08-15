@@ -5,20 +5,29 @@ import { createTsumoError } from "../diagnostics.js";
 import { dirExists } from "../fs.js";
 import { Resource } from "./models.js";
 import { splitResourceFileName, splitResourcePath } from "./paths.js";
+import { readResourceText } from "./text.js";
 
 export const compileSassResource = (
   resource: Resource,
   loadPaths: string[],
 ): Resource => {
-  if (resource.text === undefined) {
-    throw createTsumoError("TSUMO_SASS_TEXT_REQUIRED", "css.Sass requires a text resource");
-  }
+  const sourceText = readResourceText(resource, "css.Sass");
 
   const configuredExecutable = env["TSUMO_SASS"];
   const executable = configuredExecutable !== undefined && configuredExecutable !== null && configuredExecutable.trim() !== ""
     ? configuredExecutable.trim()
     : "sass";
-  const compiler = new SassCompiler(resource.text, executable);
+  const configuredImplementation = env["TSUMO_SASS_IMPLEMENTATION"];
+  const implementation = configuredImplementation === undefined || configuredImplementation === null || configuredImplementation.trim() === ""
+    ? "dart-sass"
+    : configuredImplementation.trim().toLowerCase();
+  if (implementation !== "dart-sass" && implementation !== "libsass") {
+    throw createTsumoError(
+      "TSUMO_SASS_IMPLEMENTATION_INVALID",
+      `Unsupported Sass implementation '${implementation}'; expected 'dart-sass' or 'libsass'`,
+    );
+  }
+  const compiler = new SassCompiler(sourceText, executable, implementation);
   for (let index = 0; index < loadPaths.length; index++) {
     const loadPath = loadPaths[index]!;
     if (dirExists(loadPath)) compiler.add_load_path(loadPath);

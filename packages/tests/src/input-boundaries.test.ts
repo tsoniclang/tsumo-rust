@@ -1,6 +1,7 @@
 import { join } from "node:path";
 
 import {
+  JsonArray,
   JsonObject,
   JsonString,
   TsumoDiagnostic,
@@ -66,6 +67,15 @@ export class InputBoundaryTests {
     Assert.StringEqual("Café 🚀", title.value);
     Assert.NumberEqual(2, title.line);
     Assert.NumberEqual(12, title.column);
+  }
+
+  json_tree_handles_large_indexed_inputs(): void {
+    const entries: string[] = [];
+    for (let index = 0; index < 27000; index++) entries.push("0");
+    const value = parseJson(`[${entries.join(",")}]`, "large.json");
+    Assert.True(value instanceof JsonArray);
+    if (!(value instanceof JsonArray)) throw new Error("Expected JSON array");
+    Assert.NumberEqual(27000, value.items.length);
   }
 
   json_tree_rejects_ambiguous_and_malformed_inputs_exactly(): void {
@@ -349,6 +359,9 @@ export const runInputBoundaryTests = (): void => {
   const tests = new InputBoundaryTests();
   runTest("JSON trees preserve Unicode kinds and source locations", () => {
     tests.json_tree_preserves_unicode_kinds_and_source_locations();
+  });
+  runTest("JSON trees handle large indexed inputs", () => {
+    tests.json_tree_handles_large_indexed_inputs();
   });
   runTest("JSON trees reject ambiguous and malformed inputs exactly", () => {
     tests.json_tree_rejects_ambiguous_and_malformed_inputs_exactly();

@@ -85,6 +85,26 @@ export class OutputPlanTests {
       deleteTestDirectory(root);
     }
   }
+
+  deferred_replacements_snapshot_outputs_before_mutation(): void {
+    const root = createTestDirectory("output-plan-deferred");
+    const output = join(root, "output");
+    try {
+      const plan = new SiteOutputPlan();
+      plan.addText("first.html", "before:<deferred-token>:after", "first page");
+      plan.addText("second.html", "unchanged", "second page");
+      const results = new Map<string, string>();
+      results.set("<deferred-token>", "ready");
+
+      plan.applyDeferredTemplateResults(results);
+      plan.render(output);
+
+      Assert.StringEqual("before:ready:after", readTextFile(join(output, "first.html")));
+      Assert.StringEqual("unchanged", readTextFile(join(output, "second.html")));
+    } finally {
+      deleteTestDirectory(root);
+    }
+  }
 }
 
 export const runOutputPlanTests = (): void => {
@@ -97,5 +117,8 @@ export const runOutputPlanTests = (): void => {
   });
   runTest("bundle assets cannot overwrite generated routes", () => {
     tests.bundle_assets_cannot_overwrite_generated_routes();
+  });
+  runTest("deferred replacements snapshot outputs before mutation", () => {
+    tests.deferred_replacements_snapshot_outputs_before_mutation();
   });
 };
