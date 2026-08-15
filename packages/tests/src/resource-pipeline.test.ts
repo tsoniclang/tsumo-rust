@@ -80,6 +80,9 @@ export class ResourcePipelineTests {
     const first = createStringResource("style.css", "a {}");
     const second = createStringResource("style.css", "b {}");
     Assert.True(first.id !== second.id);
+    Assert.True(first.publishable);
+    Assert.StringEqual("style.css", first.outputRelPath);
+    Assert.StringEqual("text/css", first.mediaType);
 
     const source = new Resource(
       "source",
@@ -112,6 +115,7 @@ export class ResourcePipelineTests {
       createDirectory(join(themeDir, "assets"));
       writeTextFile(join(siteDir, "assets", "z.txt"), "site-z");
       writeTextFile(join(siteDir, "assets", "a.txt"), "site-a");
+      writeTextFile(join(siteDir, "assets", "main.ts"), "export const value = 1;");
       writeTextFile(join(themeDir, "assets", "a.txt"), "theme-a");
       writeTextFile(join(themeDir, "assets", "m.txt"), "theme-m");
 
@@ -122,7 +126,10 @@ export class ResourcePipelineTests {
       Assert.True(matched[1]!.outputRelPath === "m.txt");
       Assert.True(matched[2]!.outputRelPath === "z.txt");
       Assert.True(matched[0]!.text === "site-a");
-      Assert.NumberEqual(3, manager.byType("text").length);
+      Assert.NumberEqual(4, manager.byType("text").length);
+      const typescript = manager.get("main.ts");
+      Assert.True(typescript !== undefined && typescript.text === "export const value = 1;");
+      Assert.True(typescript !== undefined && typescript.mediaType === "text/typescript");
     } finally {
       deleteTestDirectory(root);
     }

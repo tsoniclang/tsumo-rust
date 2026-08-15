@@ -98,9 +98,12 @@ const decodeQuoted = (
   const startsQuoted = startsDoubleQuoted || startsSingleQuoted;
   const endsQuoted = endsDoubleQuoted || endsSingleQuoted;
   if (!startsQuoted && !endsQuoted) return undefined;
+  if (!startsQuoted) {
+    if (format === "yaml") return undefined;
+    throw invalid("String has mismatched quotes");
+  }
   if (
-    !startsQuoted
-    || (startsDoubleQuoted && !endsDoubleQuoted)
+    (startsDoubleQuoted && !endsDoubleQuoted)
     || (startsSingleQuoted && !endsSingleQuoted)
     || value.length < 2
   ) {

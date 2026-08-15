@@ -64,6 +64,10 @@ export class Template {
   }
 
   renderInto(sb: TextBuilder, scope: RenderScope, env: TemplateEnvironment, overrides: Map<string, TemplateNode[]>): void {
-    renderTemplateNodes(this.nodes, sb, scope, env, overrides, this.defines);
+    renderTemplateNodes(this.nodes, sb, scope, env, overrides, this.defines, "html");
+  }
+
+  renderTextInto(sb: TextBuilder, scope: RenderScope, env: TemplateEnvironment, overrides: Map<string, TemplateNode[]>): void {
+    renderTemplateNodes(this.nodes, sb, scope, env, overrides, this.defines, "text");
   }
 }

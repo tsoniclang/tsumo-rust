@@ -6,6 +6,7 @@ import { runOutputPlanTests } from "./output-plan.test.js";
 import { runResourcePipelineTests } from "./resource-pipeline.test.js";
 import { runScaffoldAndBuildTests } from "./scaffold-and-build.test.js";
 import { runTemplateRuntimeTests } from "./template-runtime.test.js";
+import { runThemeCompatibilityTests } from "./theme-compatibility.test.js";
 import { completeTests } from "./test-root.js";
 
 export function main(): void {
@@ -17,6 +18,7 @@ export function main(): void {
   runOutputPlanTests();
   runResourcePipelineTests();
   runTemplateRuntimeTests();
-  completeTests(54);
+  runThemeCompatibilityTests();
+  completeTests(63);
   return;
 }

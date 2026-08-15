@@ -30,7 +30,7 @@ export { SiteContext } from "./models/site-context.js";
 export { FrontMatterMenu } from "./frontmatter/menu.js";
 export { buildMenuHierarchy } from "./menus.js";
 export { ParamValue } from "./params.js";
-export { parseShortcodes } from "./shortcode.js";
+export { collectShortcodeNames, parseShortcodes } from "./shortcode.js";
 export { parseImageDimensions } from "./resources/image-dimensions.js";
 export { resourceGlobMatches } from "./resources/glob.js";
 export { ResourceManager } from "./resources/manager.js";
@@ -47,6 +47,9 @@ export { TextBuilder } from "./utils/text-builder.js";
 export { contentTypeForPath } from "./utils/mime.js";
 export { listDirectoriesTopDirectory, listFilesRecursive, listFilesTopDirectory } from "./fs.js";
 export { createWatchSnapshot, watchSnapshotsEqual } from "./watch-snapshot.js";
+export { I18nStore } from "./i18n.js";
+export { loadSiteData } from "./template/data-loader.js";
+export { ModuleMount } from "./models/site-config.js";
 export {
   JsonArray,
   JsonBool,
@@ -59,6 +62,7 @@ export {
   DateValue,
   DictValue,
   PageArrayValue,
+  PageGroupValue,
   PageDataValue,
   PageValue,
   StringValue,

@@ -1,21 +1,28 @@
 import {
-  DictValue, HtmlString, PageContext, parseTemplate, RenderScope, RenderState, ResourceManager,
+  DictValue, HtmlString, I18nStore, PageContext, parseTemplate, RenderScope, RenderState, ResourceManager,
   SiteConfig, SiteContext, Template, TemplateEnvironment, TemplateNode, TemplateValue, TextBuilder,
   TsumoDiagnostic, TsumoError,
 } from "@tsumo/engine/testing.js";
+import type { int32 } from "@tsonic/core/types.js";
 
 export class TestTemplateEnvironment extends TemplateEnvironment {
   templates: Map<string, Template>;
   resourceManager: ResourceManager | undefined;
+  i18nStore: I18nStore | undefined;
 
   constructor(resourceManager?: ResourceManager) {
     super(new Date(1704067200000));
     this.templates = new Map<string, Template>();
     this.resourceManager = resourceManager;
+    this.i18nStore = undefined;
   }
 
   getEnvironmentVariable(name: string): string | undefined {
     return name === "TSUMO_TEST_VALUE" ? "configured" : undefined;
+  }
+
+  sourceFileExists(path: string): boolean {
+    return path === "static/existing.css";
   }
 
   getTemplate(path: string): Template | undefined {
@@ -28,6 +35,20 @@ export class TestTemplateEnvironment extends TemplateEnvironment {
 
   getResourceManager(): ResourceManager | undefined {
     return this.resourceManager;
+  }
+
+  getI18n(lang: string, key: string, count?: int32): string {
+    return this.i18nStore?.translate(lang, key, count) ?? key;
+  }
+
+  renderTextTemplateSource(
+    source: string,
+    context: TemplateValue,
+    site: SiteContext,
+    overrides: Map<string, TemplateNode[]>,
+    state?: RenderState,
+  ): string {
+    return this.renderTextTemplate(parseTemplate(source), context, site, overrides, state);
   }
 
   renderPageView(page: PageContext, view: string, _state: RenderState | undefined): string | undefined {
@@ -44,6 +65,19 @@ export class TestTemplateEnvironment extends TemplateEnvironment {
     const output = new TextBuilder();
     const scope = new RenderScope(context, context, site, this, undefined, state, template.sourcePath);
     template.renderInto(output, scope, this, overrides);
+    return output.toString();
+  }
+
+  renderTextTemplate(
+    template: Template,
+    context: TemplateValue,
+    site: SiteContext,
+    overrides: Map<string, TemplateNode[]>,
+    state?: RenderState,
+  ): string {
+    const output = new TextBuilder();
+    const scope = new RenderScope(context, context, site, this, undefined, state, template.sourcePath);
+    template.renderTextInto(output, scope, this, overrides);
     return output.toString();
   }
 

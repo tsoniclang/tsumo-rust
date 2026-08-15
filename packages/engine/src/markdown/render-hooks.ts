@@ -63,6 +63,7 @@ export const renderMarkdownWithHooks = (
         occurrence.title,
         occurrence.plain_text,
         context.page,
+        context.page,
       ));
       document.replace_html(index, renderHookTemplate(template, value, context));
       continue;
@@ -76,6 +77,7 @@ export const renderMarkdownWithHooks = (
         occurrence.title,
         occurrence.plain_text,
         context.page,
+        context.page,
       ));
       document.replace_html(index, renderHookTemplate(template, value, context));
       continue;
@@ -88,6 +90,7 @@ export const renderMarkdownWithHooks = (
         document.occurrence_html(index),
         occurrence.plain_text,
         occurrence.anchor,
+        context.page,
         context.page,
       ));
       document.replace_html(index, renderHookTemplate(template, value, context));

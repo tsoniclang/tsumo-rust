@@ -1,6 +1,10 @@
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::fs;
 use std::io::Write;
+use std::path::Path;
 use std::process::{Command, Stdio};
+use std::rc::Rc;
 
 use image::ImageFormat;
 use image::imageops::FilterType;
@@ -8,6 +12,43 @@ use linkify::{LinkFinder, LinkKind};
 use pulldown_cmark::{CowStr, Event, HeadingLevel, LinkType, Options, Parser, Tag, TagEnd, html};
 use regex::Regex;
 use tsonic_rust_runtime::{TsonicError, TsonicResult};
+
+#[derive(Default)]
+struct TextBuilderValue {
+    text: String,
+    utf16_length: i32,
+}
+
+#[derive(Clone, Default)]
+pub struct TextBuilderState {
+    value: Rc<RefCell<TextBuilderValue>>,
+}
+
+impl TextBuilderState {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn append(&self, text: &str) -> TsonicResult<()> {
+        let additional = i32::try_from(text.encode_utf16().count())
+            .map_err(|_| platform_error("text builder length exceeds the supported range"))?;
+        let mut value = self.value.borrow_mut();
+        value.utf16_length = value
+            .utf16_length
+            .checked_add(additional)
+            .ok_or_else(|| platform_error("text builder length exceeds the supported range"))?;
+        value.text.push_str(text);
+        Ok(())
+    }
+
+    pub fn length(&self) -> i32 {
+        self.value.borrow().utf16_length
+    }
+
+    pub fn to_string(&self) -> String {
+        self.value.borrow().text.clone()
+    }
+}
 
 #[derive(Clone)]
 enum MarkdownModification {
@@ -589,14 +630,16 @@ fn render_table_of_contents(headings: &[InternalOccurrence]) -> String {
 pub struct SassCompiler {
     source: String,
     executable: String,
+    implementation: String,
     load_paths: Vec<String>,
 }
 
 impl SassCompiler {
-    pub fn new(source: &str, executable: &str) -> Self {
+    pub fn new(source: &str, executable: &str, implementation: &str) -> Self {
         Self {
             source: source.to_owned(),
             executable: executable.to_owned(),
+            implementation: implementation.to_owned(),
             load_paths: Vec::new(),
         }
     }
@@ -606,6 +649,16 @@ impl SassCompiler {
     }
 
     pub fn compile(&self) -> TsonicResult<String> {
+        match self.implementation.as_str() {
+            "dart-sass" => self.compile_dart_sass(),
+            "libsass" => self.compile_libsass(),
+            implementation => Err(platform_error(format!(
+                "unsupported Sass implementation '{implementation}'"
+            ))),
+        }
+    }
+
+    fn compile_dart_sass(&self) -> TsonicResult<String> {
         let mut command = Command::new(&self.executable);
         command.args(["--no-source-map", "--style", "expanded", "--stdin"]);
         for path in &self.load_paths {
@@ -640,6 +693,156 @@ impl SassCompiler {
         }
         String::from_utf8(output.stdout)
             .map_err(|_| platform_error("Sass compiler output was not valid UTF-8"))
+    }
+
+    fn compile_libsass(&self) -> TsonicResult<String> {
+        let work_directory = tempfile::tempdir()
+            .map_err(|error| platform_error(format!("failed to create Sass work directory: {error}")))?;
+        let input_path = work_directory.path().join("input.scss");
+        let output_path = work_directory.path().join("output.css");
+        fs::write(&input_path, self.source.as_bytes())
+            .map_err(|error| platform_error(format!("failed to write Sass input: {error}")))?;
+
+        let mut command = Command::new(&self.executable);
+        command.args(["-t", "expanded"]);
+        for path in &self.load_paths {
+            command.arg("-I").arg(path);
+        }
+        let output = command
+            .arg(&input_path)
+            .arg(&output_path)
+            .output()
+            .map_err(|error| {
+                platform_error(format!(
+                    "failed to start Sass compiler '{}': {error}",
+                    self.executable
+                ))
+            })?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_owned();
+            return Err(platform_error(if stderr.is_empty() {
+                format!("Sass compiler failed with status {}", output.status)
+            } else {
+                stderr
+            }));
+        }
+        fs::read_to_string(&output_path)
+            .map_err(|error| platform_error(format!("failed to read Sass output: {error}")))
+    }
+}
+
+pub struct JavaScriptCompiler {
+    source: String,
+    executable: String,
+    source_path: String,
+    extension: String,
+    minify: bool,
+    format: String,
+    target: String,
+    platform: String,
+    params_json: String,
+    jsx_factory: String,
+}
+
+impl JavaScriptCompiler {
+    pub fn new(source: &str, executable: &str, source_path: &str, extension: &str) -> Self {
+        Self {
+            source: source.to_owned(),
+            executable: executable.to_owned(),
+            source_path: source_path.to_owned(),
+            extension: extension.to_owned(),
+            minify: false,
+            format: "iife".to_owned(),
+            target: "esnext".to_owned(),
+            platform: "browser".to_owned(),
+            params_json: String::new(),
+            jsx_factory: String::new(),
+        }
+    }
+
+    pub fn set_minify(&mut self, value: bool) {
+        self.minify = value;
+    }
+
+    pub fn set_format(&mut self, value: &str) {
+        self.format = value.to_owned();
+    }
+
+    pub fn set_target(&mut self, value: &str) {
+        self.target = value.to_owned();
+    }
+
+    pub fn set_platform(&mut self, value: &str) {
+        self.platform = value.to_owned();
+    }
+
+    pub fn set_params_json(&mut self, value: &str) {
+        self.params_json = value.to_owned();
+    }
+
+    pub fn set_jsx_factory(&mut self, value: &str) {
+        self.jsx_factory = value.to_owned();
+    }
+
+    pub fn compile(&self) -> TsonicResult<String> {
+        let extension = match self.extension.as_str() {
+            ".ts" | ".tsx" | ".jsx" => self.extension.as_str(),
+            _ => ".js",
+        };
+        let work_directory = tempfile::tempdir()
+            .map_err(|error| platform_error(format!("failed to create esbuild work directory: {error}")))?;
+        let temporary_input = work_directory.path().join(format!("input{extension}"));
+        let original_input = Path::new(&self.source_path);
+        let input_path = if !self.source_path.is_empty()
+            && original_input.is_file()
+            && fs::read_to_string(original_input).ok().as_deref() == Some(self.source.as_str())
+        {
+            original_input.to_path_buf()
+        } else {
+            fs::write(&temporary_input, self.source.as_bytes())
+                .map_err(|error| platform_error(format!("failed to write esbuild input: {error}")))?;
+            temporary_input
+        };
+        let output_path = work_directory.path().join("output.js");
+        let mut command = Command::new(&self.executable);
+        command
+            .arg(&input_path)
+            .arg("--bundle")
+            .arg(format!("--outfile={}", output_path.display()))
+            .arg(format!("--format={}", self.format))
+            .arg(format!("--target={}", self.target))
+            .arg(format!("--platform={}", self.platform))
+            .arg("--charset=utf8")
+            .arg("--log-level=warning");
+        if self.minify {
+            command.arg("--minify");
+        }
+        if !self.jsx_factory.is_empty() {
+            command.arg(format!("--jsx-factory={}", self.jsx_factory));
+        }
+        if !self.params_json.is_empty() {
+            let params_path = work_directory.path().join("params.json");
+            fs::write(&params_path, self.params_json.as_bytes()).map_err(|error| {
+                platform_error(format!("failed to write esbuild params module: {error}"))
+            })?;
+            command.arg(format!("--alias:@params={}", params_path.display()));
+        }
+        let output = command.output().map_err(|error| {
+            platform_error(format!(
+                "failed to start esbuild '{}': {error}",
+                self.executable
+            ))
+        })?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_owned();
+            return Err(platform_error(if stderr.is_empty() {
+                format!("esbuild failed with status {}", output.status)
+            } else {
+                stderr
+            }));
+        }
+        fs::read_to_string(&output_path)
+            .map_err(|error| platform_error(format!("failed to read esbuild output: {error}")))
     }
 }
 
@@ -679,6 +882,100 @@ pub fn replace_regex(pattern: &str, replacement: &str, input: &str) -> TsonicRes
     let expression = Regex::new(pattern)
         .map_err(|error| platform_error(format!("invalid regular expression: {error}")))?;
     Ok(expression.replace_all(input, replacement).into_owned())
+}
+
+pub fn replace_regex_limited(
+    pattern: &str,
+    replacement: &str,
+    input: &str,
+    limit: i32,
+) -> TsonicResult<String> {
+    let expression = Regex::new(pattern)
+        .map_err(|error| platform_error(format!("invalid regular expression: {error}")))?;
+    if limit < 0 {
+        return Ok(expression.replace_all(input, replacement).into_owned());
+    }
+    let count = usize::try_from(limit)
+        .map_err(|_| platform_error("regular expression replacement limit is invalid"))?;
+    Ok(expression.replacen(input, count, replacement).into_owned())
+}
+
+pub fn find_regex_matches(pattern: &str, input: &str, limit: i32) -> TsonicResult<Vec<String>> {
+    let expression = Regex::new(pattern)
+        .map_err(|error| platform_error(format!("invalid regular expression: {error}")))?;
+    let maximum = if limit < 0 {
+        usize::MAX
+    } else {
+        usize::try_from(limit)
+            .map_err(|_| platform_error("regular expression match limit is invalid"))?
+    };
+    Ok(expression
+        .find_iter(input)
+        .take(maximum)
+        .map(|matched| matched.as_str().to_owned())
+        .collect())
+}
+
+pub struct RegexSubmatches {
+    rows: Vec<Vec<String>>,
+}
+
+impl RegexSubmatches {
+    pub fn has_rows(&self) -> bool {
+        !self.rows.is_empty()
+    }
+
+    pub fn pop_row(&mut self) -> TsonicResult<RegexSubmatchRow> {
+        self.rows
+            .pop()
+            .map(|groups| RegexSubmatchRow { groups })
+            .ok_or_else(|| platform_error("regular expression submatch collection is empty"))
+    }
+}
+
+pub struct RegexSubmatchRow {
+    groups: Vec<String>,
+}
+
+impl RegexSubmatchRow {
+    pub fn has_groups(&self) -> bool {
+        !self.groups.is_empty()
+    }
+
+    pub fn pop_group(&mut self) -> TsonicResult<String> {
+        self.groups
+            .pop()
+            .ok_or_else(|| platform_error("regular expression submatch row is empty"))
+    }
+}
+
+pub fn find_regex_submatches(
+    pattern: &str,
+    input: &str,
+    limit: i32,
+) -> TsonicResult<RegexSubmatches> {
+    let expression = Regex::new(pattern)
+        .map_err(|error| platform_error(format!("invalid regular expression: {error}")))?;
+    let maximum = if limit < 0 {
+        usize::MAX
+    } else {
+        usize::try_from(limit)
+            .map_err(|_| platform_error("regular expression match limit is invalid"))?
+    };
+    let rows = expression
+        .captures_iter(input)
+        .take(maximum)
+        .map(|captures| {
+            (0..captures.len())
+                .map(|group_index| {
+                    captures
+                        .get(group_index)
+                        .map_or_else(String::new, |group| group.as_str().to_owned())
+                })
+                .collect()
+        })
+        .collect();
+    Ok(RegexSubmatches { rows })
 }
 
 pub fn decode_html(input: &str) -> String {
@@ -792,11 +1089,30 @@ mod tests {
 
     #[test]
     fn text_helpers_preserve_their_exact_contracts() {
+        let builder = TextBuilderState::new();
+        let alias = builder.clone();
+        assert_eq!(builder.length(), 0);
+        builder.append("alpha").expect("append ASCII");
+        alias.append("β🙂").expect("append Unicode");
+        assert_eq!(builder.length(), 8);
+        assert_eq!(builder.to_string(), "alphaβ🙂");
+
         assert_eq!(
             replace_regex("([a-z]+)([0-9]+)", "$2-$1", "item42").expect("valid expression"),
             "42-item",
         );
         assert!(replace_regex("(", "x", "input").is_err());
+        let mut matches = find_regex_submatches("([a-z]+)([0-9]+)", "item42", -1)
+            .expect("valid submatch expression");
+        assert!(matches.has_rows());
+        let mut row = matches.pop_row().expect("one submatch row");
+        assert_eq!(row.pop_group().expect("last capture"), "42");
+        assert_eq!(row.pop_group().expect("first capture"), "item");
+        assert_eq!(row.pop_group().expect("full match"), "item42");
+        assert!(!row.has_groups());
+        assert!(row.pop_group().is_err());
+        assert!(!matches.has_rows());
+        assert!(matches.pop_row().is_err());
         assert_eq!(decode_html("&lt;b&gt;&#x1F642;&lt;/b&gt;"), "<b>🙂</b>");
         assert_eq!(encode_url_component("a b/🙂"), "a%20b%2F%F0%9F%99%82");
     }

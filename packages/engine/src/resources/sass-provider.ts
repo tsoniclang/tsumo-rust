@@ -18,7 +18,17 @@ export const compileSassResource = (
   const executable = configuredExecutable !== undefined && configuredExecutable !== null && configuredExecutable.trim() !== ""
     ? configuredExecutable.trim()
     : "sass";
-  const compiler = new SassCompiler(resource.text, executable);
+  const configuredImplementation = env["TSUMO_SASS_IMPLEMENTATION"];
+  const implementation = configuredImplementation === undefined || configuredImplementation === null || configuredImplementation.trim() === ""
+    ? "dart-sass"
+    : configuredImplementation.trim().toLowerCase();
+  if (implementation !== "dart-sass" && implementation !== "libsass") {
+    throw createTsumoError(
+      "TSUMO_SASS_IMPLEMENTATION_INVALID",
+      `Unsupported Sass implementation '${implementation}'; expected 'dart-sass' or 'libsass'`,
+    );
+  }
+  const compiler = new SassCompiler(resource.text, executable, implementation);
   for (let index = 0; index < loadPaths.length; index++) {
     const loadPath = loadPaths[index]!;
     if (dirExists(loadPath)) compiler.add_load_path(loadPath);
