@@ -17,6 +17,6 @@ export class TextBuilder {
   }
 
   toString(): string {
-    return this.#state.to_string();
+    return this.#state.snapshot();
   }
 }

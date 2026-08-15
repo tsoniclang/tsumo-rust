@@ -2,10 +2,12 @@ import { join } from "node:path";
 
 import {
   DateValue,
+  getEmbeddedTemplateSource,
   loadSiteData,
   ModuleMount,
   PageValue,
   parseTemplate,
+  ResourceManager,
 } from "@tsumo/engine/testing.js";
 import {
   Assert,
@@ -46,6 +48,73 @@ export class ThemeCompatibilityTests {
       captureDiagnosticCode(() => {
         render("{{ time \"not-a-date\" }}");
       }),
+    );
+  }
+
+  date_methods_and_unicode_substrings_follow_hugo_semantics(): void {
+    Assert.StringEqual(
+      "2024-03-02|true",
+      renderWithRoot(
+        "{{ (.AddDate 0 1 0).Format \"2006-01-02\" }}|" +
+        "{{ (.AddDate 0 0 2).After (.AddDate 0 0 1) }}",
+        new DateValue("2024-01-31T00:00:00Z"),
+      ),
+    );
+    Assert.StringEqual(
+      "😀B|ef|bcd|",
+      render(
+        "{{ substr \"A😀BC\" 1 2 }}|{{ strings.Substr \"abcdef\" -2 }}|" +
+        "{{ substr \"abcdef\" 1 -2 }}|{{ substr \"abcdef\" 20 }}",
+      ),
+    );
+    Assert.StringEqual("1704067200|1704067200000000000", render("{{ now.Unix }}|{{ now.UnixNano }}"));
+    Assert.StringEqual("TSUMO_TEMPLATE_DATE_INVALID", captureDiagnosticCode(() => {
+      renderWithRoot("{{ .AddDate 2147483647 0 0 }}", new DateValue("2024-01-31T00:00:00Z"));
+    }));
+    Assert.StringEqual("TSUMO_TEMPLATE_DATE_INVALID", captureDiagnosticCode(() => {
+      renderWithRoot("{{ .AddDate 0 0 2147483647 }}", new DateValue("2024-01-31T00:00:00Z"));
+    }));
+    Assert.StringEqual(
+      "TSUMO_TEMPLATE_SUBSTRING_ARGUMENT_INVALID",
+      captureDiagnosticCode(() => {
+        render("{{ substr \"abc\" \"invalid\" }}");
+      }),
+    );
+  }
+
+  integer_sequences_follow_hugo_semantics_and_limits(): void {
+    Assert.StringEqual(
+      "1,2,3,|-2,-1,0,1,2,|6,4,2,|-1,-2,-3,",
+      render(
+        "{{ range seq 3 }}{{ . }},{{ end }}|" +
+        "{{ range collections.Seq -2 2 }}{{ . }},{{ end }}|" +
+        "{{ range seq 6 -2 2 }}{{ . }},{{ end }}|" +
+        "{{ range seq -3 }}{{ . }},{{ end }}",
+      ),
+    );
+    Assert.StringEqual(
+      "TSUMO_TEMPLATE_SEQUENCE_INCREMENT_INVALID",
+      captureDiagnosticCode(() => {
+        render("{{ seq 1 0 2 }}");
+      }),
+    );
+    Assert.StringEqual(
+      "TSUMO_TEMPLATE_SEQUENCE_SIZE_UNSUPPORTED",
+      captureDiagnosticCode(() => {
+        render("{{ seq -1000001 }}");
+      }),
+    );
+  }
+
+  string_cutset_functions_follow_unicode_semantics(): void {
+    Assert.StringEqual(
+      "path😀|😀/path|value|middle",
+      render(
+        "{{ strings.TrimLeft \"😀/\" \"😀/path😀\" }}|" +
+        "{{ strings.TrimRight \"😀/\" \"😀/path😀/\" }}|" +
+        "{{ strings.TrimSpace \"\u00a0value\u3000\" }}|" +
+        "{{ strings.Trim \"😀/middle/😀\" \"😀/\" }}",
+      ),
     );
   }
 
@@ -119,6 +188,43 @@ export class ThemeCompatibilityTests {
       deleteTestDirectory(root);
     }
   }
+
+  embedded_page_image_partial_selects_published_page_resources(): void {
+    const root = createTestDirectory("embedded-page-images");
+    const siteDirectory = join(root, "site");
+    const bundleDirectory = join(siteDirectory, "content", "home");
+    const outputDirectory = join(root, "output");
+    try {
+      createDirectory(bundleDirectory);
+      writeTextFile(join(bundleDirectory, "cover.svg"), "<svg></svg>");
+      const source = getEmbeddedTemplateSource("_partials/_funcs/get-page-images.html");
+      if (source === undefined) {
+        Assert.True(false);
+        return;
+      }
+      const environment = new TestTemplateEnvironment(
+        new ResourceManager(siteDirectory, undefined, outputDirectory),
+      );
+      environment.templates.set(
+        "_partials/_funcs/get-page-images",
+        parseTemplate(source, "_partials/_funcs/get-page-images.html"),
+      );
+      const site = createSite();
+      const page = createPage(site, "Home", "", "home");
+      page.resourceSourceDir = bundleDirectory;
+      Assert.StringEqual(
+        "/home/cover.svg",
+        environment.renderTemplate(
+          parseTemplate("{{ with index (partial \"_funcs/get-page-images\" .) 0 }}{{ .RelPermalink }}{{ end }}"),
+          new PageValue(page),
+          site,
+          new Map(),
+        ),
+      );
+    } finally {
+      deleteTestDirectory(root);
+    }
+  }
 }
 
 export const runThemeCompatibilityTests = (): void => {
@@ -126,10 +232,22 @@ export const runThemeCompatibilityTests = (): void => {
   runTest("chained alternatives preserve the selected context", () => {
     tests.chained_alternatives_preserve_the_selected_context();
   });
+  runTest("date methods and Unicode substrings follow Hugo semantics", () => {
+    tests.date_methods_and_unicode_substrings_follow_hugo_semantics();
+  });
+  runTest("integer sequences follow Hugo semantics and limits", () => {
+    tests.integer_sequences_follow_hugo_semantics_and_limits();
+  });
+  runTest("string cutset functions follow Unicode semantics", () => {
+    tests.string_cutset_functions_follow_unicode_semantics();
+  });
   runTest("where filters structured slices and rejects unproven inputs", () => {
     tests.where_filters_structured_slices_and_rejects_unproven_inputs();
   });
   runTest("site data layers are structured, deterministic, and conflict checked", () => {
     tests.site_data_layers_are_structured_deterministic_and_conflict_checked();
+  });
+  runTest("embedded page image partial selects published page resources", () => {
+    tests.embedded_page_image_partial_selects_published_page_resources();
   });
 };

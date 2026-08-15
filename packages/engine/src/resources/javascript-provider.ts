@@ -4,6 +4,7 @@ import { JavaScriptCompiler } from "@tsonic/rust/crates/tsumo_platform/index.js"
 import { createTsumoError } from "../diagnostics.js";
 import { Resource } from "./models.js";
 import { splitResourceFileName, splitResourcePath } from "./paths.js";
+import { readResourceText } from "./text.js";
 
 const cacheKeyPart = (value: string): string => `${value.length}:${value}`;
 
@@ -65,9 +66,7 @@ export const buildJavaScriptResource = (
   resource: Resource,
   options: JavaScriptBuildOptions,
 ): Resource => {
-  if (resource.text === undefined) {
-    throw createTsumoError("TSUMO_JAVASCRIPT_TEXT_REQUIRED", "js.Build requires a text resource");
-  }
+  const sourceText = readResourceText(resource, "js.Build");
   if (options.sourceMap !== "none") {
     throw createTsumoError(
       "TSUMO_JAVASCRIPT_SOURCE_MAP_UNSUPPORTED",
@@ -80,7 +79,7 @@ export const buildJavaScriptResource = (
     ? configuredExecutable.trim()
     : "esbuild";
   const compiler = new JavaScriptCompiler(
-    resource.text,
+    sourceText,
     executable,
     resource.sourcePath ?? "",
     sourceExtension(resource),

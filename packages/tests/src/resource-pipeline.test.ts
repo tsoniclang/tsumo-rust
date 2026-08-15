@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -7,6 +8,8 @@ import {
   fingerprintResource,
   normalizeResourceRelativePath,
   parseImageDimensions,
+  isValidUtf8,
+  readResourceText,
   Resource,
   ResourceData,
   resourceGlobMatches,
@@ -76,6 +79,54 @@ export class ResourcePipelineTests {
     Assert.True(parseImageDimensions(Buffer.from([1, 2, 3])) === undefined);
   }
 
+  utf8_validation_accepts_scalars_and_rejects_malformed_sequences(): void {
+    Assert.True(isValidUtf8(Buffer.from([
+      0x41,
+      0xc2, 0xa2,
+      0xe2, 0x82, 0xac,
+      0xf0, 0x9f, 0x98, 0x80,
+    ])));
+    const malformed = [
+      Buffer.from([0x80]),
+      Buffer.from([0xc0, 0x80]),
+      Buffer.from([0xe0, 0x80, 0x80]),
+      Buffer.from([0xed, 0xa0, 0x80]),
+      Buffer.from([0xf4, 0x90, 0x80, 0x80]),
+      Buffer.from([0xf0, 0x9f, 0x92]),
+    ];
+    for (let index = 0; index < malformed.length; index++) {
+      Assert.True(!isValidUtf8(malformed[index]!));
+    }
+  }
+
+  file_resources_publish_raw_bytes_and_decode_only_for_text_operations(): void {
+    const root = createTestDirectory("resource-bytes");
+    const siteDir = join(root, "site");
+    const outputDir = join(root, "output");
+    try {
+      const assetsDir = join(siteDir, "assets");
+      createDirectory(assetsDir);
+      const sourceBytes = Buffer.from([0x61, 0xa0, 0x62]);
+      writeFileSync(join(assetsDir, "legacy.js"), sourceBytes);
+      const manager = new ResourceManager(siteDir, undefined, outputDir);
+      const resource = manager.get("legacy.js");
+      Assert.True(resource !== undefined && resource.text === undefined);
+      if (resource === undefined) throw new Error("Expected legacy.js resource");
+      manager.ensurePublished(resource);
+      const published = readFileSync(join(outputDir, "legacy.js"));
+      Assert.NumberEqual(3, published.length);
+      Assert.NumberEqual(0xa0, published.readUInt8(1));
+      Assert.StringEqual(
+        "TSUMO_RESOURCE_TEXT_ENCODING_INVALID",
+        captureResourceDiagnostic(() => {
+          readResourceText(resource, "Resource.Content");
+        }),
+      );
+    } finally {
+      deleteTestDirectory(root);
+    }
+  }
+
   transform_identity_and_metadata_are_content_exact(): void {
     const first = createStringResource("style.css", "a {}");
     const second = createStringResource("style.css", "b {}");
@@ -125,10 +176,12 @@ export class ResourcePipelineTests {
       Assert.True(matched[0]!.outputRelPath === "a.txt");
       Assert.True(matched[1]!.outputRelPath === "m.txt");
       Assert.True(matched[2]!.outputRelPath === "z.txt");
-      Assert.True(matched[0]!.text === "site-a");
+      Assert.True(matched[0]!.text === undefined);
+      Assert.StringEqual("site-a", readResourceText(matched[0]!, "test"));
       Assert.NumberEqual(4, manager.byType("text").length);
       const typescript = manager.get("main.ts");
-      Assert.True(typescript !== undefined && typescript.text === "export const value = 1;");
+      Assert.True(typescript !== undefined && typescript.text === undefined);
+      Assert.True(typescript !== undefined && readResourceText(typescript, "test") === "export const value = 1;");
       Assert.True(typescript !== undefined && typescript.mediaType === "text/typescript");
     } finally {
       deleteTestDirectory(root);
@@ -146,6 +199,12 @@ export const runResourcePipelineTests = (): void => {
   });
   runTest("image dimensions are read from exact file signatures", () => {
     tests.image_dimensions_are_read_from_exact_file_signatures();
+  });
+  runTest("UTF-8 validation accepts scalars and rejects malformed sequences", () => {
+    tests.utf8_validation_accepts_scalars_and_rejects_malformed_sequences();
+  });
+  runTest("file resources publish raw bytes and decode only for text operations", () => {
+    tests.file_resources_publish_raw_bytes_and_decode_only_for_text_operations();
   });
   runTest("transform identity and metadata are content exact", () => {
     tests.transform_identity_and_metadata_are_content_exact();

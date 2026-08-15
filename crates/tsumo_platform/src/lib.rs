@@ -45,7 +45,7 @@ impl TextBuilderState {
         self.value.borrow().utf16_length
     }
 
-    pub fn to_string(&self) -> String {
+    pub fn snapshot(&self) -> String {
         self.value.borrow().text.clone()
     }
 }
@@ -696,8 +696,9 @@ impl SassCompiler {
     }
 
     fn compile_libsass(&self) -> TsonicResult<String> {
-        let work_directory = tempfile::tempdir()
-            .map_err(|error| platform_error(format!("failed to create Sass work directory: {error}")))?;
+        let work_directory = tempfile::tempdir().map_err(|error| {
+            platform_error(format!("failed to create Sass work directory: {error}"))
+        })?;
         let input_path = work_directory.path().join("input.scss");
         let output_path = work_directory.path().join("output.css");
         fs::write(&input_path, self.source.as_bytes())
@@ -789,8 +790,9 @@ impl JavaScriptCompiler {
             ".ts" | ".tsx" | ".jsx" => self.extension.as_str(),
             _ => ".js",
         };
-        let work_directory = tempfile::tempdir()
-            .map_err(|error| platform_error(format!("failed to create esbuild work directory: {error}")))?;
+        let work_directory = tempfile::tempdir().map_err(|error| {
+            platform_error(format!("failed to create esbuild work directory: {error}"))
+        })?;
         let temporary_input = work_directory.path().join(format!("input{extension}"));
         let original_input = Path::new(&self.source_path);
         let input_path = if !self.source_path.is_empty()
@@ -799,8 +801,9 @@ impl JavaScriptCompiler {
         {
             original_input.to_path_buf()
         } else {
-            fs::write(&temporary_input, self.source.as_bytes())
-                .map_err(|error| platform_error(format!("failed to write esbuild input: {error}")))?;
+            fs::write(&temporary_input, self.source.as_bytes()).map_err(|error| {
+                platform_error(format!("failed to write esbuild input: {error}"))
+            })?;
             temporary_input
         };
         let output_path = work_directory.path().join("output.js");
@@ -1002,6 +1005,41 @@ pub fn encode_url_component(input: &str) -> String {
     output
 }
 
+pub fn decode_url_component(input: &str) -> TsonicResult<String> {
+    let bytes = input.as_bytes();
+    let mut output = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] != b'%' {
+            output.push(bytes[index]);
+            index += 1;
+            continue;
+        }
+        if index + 2 >= bytes.len() {
+            return Err(platform_error(
+                "URL component contains an incomplete percent escape",
+            ));
+        }
+        let high = decode_hex_digit(bytes[index + 1])
+            .ok_or_else(|| platform_error("URL component contains an invalid percent escape"))?;
+        let low = decode_hex_digit(bytes[index + 2])
+            .ok_or_else(|| platform_error("URL component contains an invalid percent escape"))?;
+        output.push((high << 4) | low);
+        index += 3;
+    }
+    String::from_utf8(output)
+        .map_err(|_| platform_error("URL component contains invalid UTF-8 data"))
+}
+
+fn decode_hex_digit(value: u8) -> Option<u8> {
+    match value {
+        b'0'..=b'9' => Some(value - b'0'),
+        b'a'..=b'f' => Some(value - b'a' + 10),
+        b'A'..=b'F' => Some(value - b'A' + 10),
+        _ => None,
+    }
+}
+
 fn platform_error(message: impl Into<String>) -> TsonicError {
     TsonicError::unsupported(message)
 }
@@ -1095,7 +1133,7 @@ mod tests {
         builder.append("alpha").expect("append ASCII");
         alias.append("β🙂").expect("append Unicode");
         assert_eq!(builder.length(), 8);
-        assert_eq!(builder.to_string(), "alphaβ🙂");
+        assert_eq!(builder.snapshot(), "alphaβ🙂");
 
         assert_eq!(
             replace_regex("([a-z]+)([0-9]+)", "$2-$1", "item42").expect("valid expression"),
@@ -1115,5 +1153,11 @@ mod tests {
         assert!(matches.pop_row().is_err());
         assert_eq!(decode_html("&lt;b&gt;&#x1F642;&lt;/b&gt;"), "<b>🙂</b>");
         assert_eq!(encode_url_component("a b/🙂"), "a%20b%2F%F0%9F%99%82");
+        assert_eq!(
+            decode_url_component("a%20b%2F%F0%9F%99%82").expect("valid URL component"),
+            "a b/🙂",
+        );
+        assert!(decode_url_component("%ZZ").is_err());
+        assert!(decode_url_component("%F0%28%8C%28").is_err());
     }
 }

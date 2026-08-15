@@ -5,6 +5,9 @@ import { runInputBoundaryTests } from "./input-boundaries.test.js";
 import { runOutputPlanTests } from "./output-plan.test.js";
 import { runResourcePipelineTests } from "./resource-pipeline.test.js";
 import { runScaffoldAndBuildTests } from "./scaffold-and-build.test.js";
+import { runTemplateControlFlowTests } from "./template-control-flow.test.js";
+import { runTemplateFunctionSemanticsTests } from "./template-function-semantics.test.js";
+import { runTemplatePageContextTests } from "./template-page-context.test.js";
 import { runTemplateRuntimeTests } from "./template-runtime.test.js";
 import { runThemeCompatibilityTests } from "./theme-compatibility.test.js";
 import { completeTests } from "./test-root.js";
@@ -17,8 +20,11 @@ export function main(): void {
   runDocsDomainTests();
   runOutputPlanTests();
   runResourcePipelineTests();
+  runTemplateControlFlowTests();
+  runTemplateFunctionSemanticsTests();
+  runTemplatePageContextTests();
   runTemplateRuntimeTests();
   runThemeCompatibilityTests();
-  completeTests(63);
+  completeTests(72);
   return;
 }

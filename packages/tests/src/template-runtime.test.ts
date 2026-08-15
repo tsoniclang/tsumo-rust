@@ -3,18 +3,13 @@ import { join } from "node:path";
 import {
   collectShortcodeNames,
   DictValue,
-  DateValue,
   I18nStore,
-  ParamValue,
-  PageContext,
   PageValue,
   parseShortcodes,
   parseTemplate,
-  RenderScope,
   ResourceManager,
   StringValue,
   TemplateValue,
-  TextBuilder,
 } from "@tsumo/engine/testing.js";
 import {
   Assert,
@@ -33,6 +28,15 @@ export class TemplateRuntimeTests {
   parser_and_evaluator_render_control_flow_and_pipeline(): void {
     const source = "{{ if true }}yes{{ else }}no{{ end }}|{{ \"ab\" | upper }}";
     Assert.StringEqual("yes|AB", render(source));
+    const site = createSite();
+    const page = createPage(site, "Home", "", "home");
+    Assert.StringEqual(
+      "false|exact",
+      renderWithRoot(
+        "{{ in (slice \"posts\" \"tags\") .Section }}|{{ (dict \"value\" \"exact\").value }}",
+        new PageValue(page),
+      ),
+    );
     Assert.StringEqual(
       "inner|outer|empty|chosen:chosen|changed|changed",
       render(
@@ -79,58 +83,6 @@ export class TemplateRuntimeTests {
         "{{ .HasShortcode \"outer\" }}|{{ .HasShortcode \"inner\" }}|" +
         "{{ .HasShortcode \"ignored\" }}|{{ .HasShortcode \"Outer\" }}",
         new PageValue(page),
-      ),
-    );
-  }
-
-  template_namespaces_expose_exact_string_and_hugo_functions(): void {
-    Assert.StringEqual("=====", render("{{ strings.Repeat 5 \"=\" }}"));
-    Assert.StringEqual(
-      '<meta name="generator" content="Hugo 0.146.2">',
-      render("{{ hugo.Generator }}"),
-    );
-    Assert.StringEqual(
-      "TSUMO_TEMPLATE_STRING_REPEAT_INVALID",
-      captureDiagnosticCode(() => {
-        render("{{ strings.Repeat -1 \"=\" }}");
-      }),
-    );
-    Assert.StringEqual("a,b", render("{{ delimit (collections.First 2 (collections.Slice \"a\" \"b\" \"c\")) \",\" }}"));
-    Assert.StringEqual("fallback", render("{{ compare.Default \"fallback\" \"\" }}"));
-    Assert.StringEqual("false|only|42", render("{{ default \"fallback\" false }}|{{ default \"only\" }}|{{ default 42 0 }}"));
-    Assert.StringEqual("nil", render("{{ if nil }}value{{ else }}nil{{ end }}"));
-    Assert.StringEqual("line", render("{{ chomp \"line\\n\" }}"));
-    Assert.StringEqual("2024", render("{{ now.Year }}"));
-    Assert.StringEqual("configured", render("{{ getenv \"TSUMO_TEST_VALUE\" }}"));
-    Assert.StringEqual("", render("{{ getenv \"TSUMO_MISSING_VALUE\" }}"));
-    Assert.StringEqual("true|false", render("{{ fileExists \"static/existing.css\" }}|{{ fileExists \"static/missing.css\" }}"));
-    Assert.StringEqual("true", render("{{ collections.IsSet (dict \"key\" \"value\") \"key\" }}"));
-    Assert.StringEqual("translated", render("{{ T \"translated\" }}"));
-    Assert.StringEqual("2026|42", render("{{ int \"2026\" }}|{{ string 42 }}"));
-    Assert.StringEqual("true|false", render("{{ collections.In (collections.Slice \"first\" \"second\") \"second\" }}|{{ collections.In (collections.Slice \"first\") \"second\" }}"));
-    Assert.StringEqual("first,second", render("{{ delimit (transform.Unmarshal \"- first\\n- second\") \",\" }}"));
-    Assert.StringEqual("value", render("{{ (transform.Unmarshal \"{\\\"key\\\":\\\"value\\\"}\").key }}"));
-    Assert.StringEqual("_partials/site-style.html", render("{{ fmt.Print \"_partials/\" \"site-style.html\" }}"));
-    Assert.StringEqual("true", render("{{ hasPrefix \"<svg viewBox=0>\" \"<svg\" }}"));
-    Assert.StringEqual("true|true|false", render(
-      "{{ reflect.IsMap (dict \"key\" \"value\") }}|{{ reflect.IsSlice (slice \"value\") }}|{{ reflect.IsMap (slice) }}",
-    ));
-    Assert.StringEqual("value|true|trimmed", render(
-      "{{ strings.ToLower \"VALUE\" }}|{{ strings.HasSuffix \"index.html\" \".html\" }}|{{ strings.Trim \"/trimmed/\" \"/\" }}",
-    ));
-    Assert.StringEqual(
-      "a%20b=c%2Fd|.css|content/page.md|900150983cd24fb0d6963f7d28e17f72|Hello World|3",
-      render(
-        "{{ collections.Querify \"a b\" \"c/d\" }}|{{ path.Ext \"assets/main.css\" }}|" +
-        "{{ path.Join \"content\" \"posts\" \"..\" \"page.md\" }}|{{ crypto.MD5 \"abc\" }}|" +
-        "{{ inflect.Humanize \"hello-world\" }}|{{ math.Ceil 3 }}",
-      ),
-    );
-    Assert.StringEqual(
-      "/asset.css|https://example.test/asset.css|https://example.test/asset.css|&lt;x&gt;",
-      render(
-        "{{ urls.RelURL \"asset.css\" }}|{{ urls.AbsURL \"/asset.css\" }}|" +
-        "{{ urls.AbsLangURL \"/asset.css\" }}|{{ safeHTML (transform.HTMLEscape \"<x>\") }}",
       ),
     );
   }
@@ -372,152 +324,13 @@ export class TemplateRuntimeTests {
   template_regular_expression_functions_preserve_matches_groups_and_limits(): void {
     Assert.StringEqual("ab,ac", render("{{ delimit (findRE `a.` `ab ac ad` 2) `,` }}"));
     Assert.StringEqual(
-      "item42|item|42",
-      render("{{ range findRESubmatch `([a-z]+)([0-9]+)` `item42` }}{{ delimit . `|` }}{{ end }}"),
+      "item42|item|42|item|42",
+      render(
+        "{{ range findRESubmatch `([a-z]+)([0-9]+)` `item42` }}" +
+        "{{ delimit . `|` }}|{{ index . 1 }}|{{ index . 2 }}{{ end }}",
+      ),
     );
     Assert.StringEqual("x2 item3", render("{{ replaceRE `item` `x` `item2 item3` 1 }}"));
-  }
-
-  date_page_data_and_render_methods_use_typed_context(): void {
-    Assert.StringEqual("2024-01-02", renderWithRoot("{{ .Format \"2006-01-02\" }}", new DateValue("2024-01-02T03:04:05Z")));
-
-    const site = createSite();
-    const older = createPage(site, "Older", "2022-04-01T00:00:00Z", "page");
-    const newer = createPage(site, "Newer", "2024-06-01T00:00:00Z", "page");
-    older.Params.set("weight", ParamValue.number(20));
-    newer.Params.set("weight", ParamValue.number(10));
-    const root = createPage(site, "Home", "", "home");
-    root.pages = [older, newer];
-    const section = createPage(site, "Section", "", "section");
-    root.pages.push(section);
-    site.pages = root.pages;
-    site.allPages = root.pages;
-    Assert.StringEqual(
-      "value",
-      renderWithRoot("{{ .Scratch.Set \"key\" \"value\" }}{{ .Scratch.Get \"key\" }}", new PageValue(root)),
-    );
-    Assert.StringEqual(
-      "2024:Newer;2022:Older;",
-      renderWithRoot("{{ range .Data.Pages.GroupByDate \"2006\" }}{{ .Key }}:{{ range .Pages }}{{ .Title }}{{ end }};{{ end }}", new PageValue(root)),
-    );
-    Assert.StringEqual(
-      "0:Section;10:Newer;20:Older;|20:Older;10:Newer;0:Section;|SectionNewerOlder",
-      renderWithRoot(
-        "{{ range .Data.Pages.GroupBy \"Weight\" }}{{ .Key }}:{{ range .ByTitle }}{{ .Title }}{{ end }};{{ end }}|" +
-        "{{ range .Data.Pages.GroupBy \"Weight\" \"desc\" }}{{ .Key }}:{{ range .Pages }}{{ .Title }}{{ end }};{{ end }}|" +
-        "{{ range .Data.Pages.ByWeight }}{{ .Title }}{{ end }}",
-        new PageValue(root),
-      ),
-    );
-    Assert.StringEqual("3", renderWithRoot("{{ len (union .RegularPages .Sections) }}", new PageValue(root)));
-
-    const environment = new TestTemplateEnvironment();
-    Assert.StringEqual(
-      "2024",
-      environment.renderTemplate(parseTemplate("{{ .Site.Lastmod.Format \"2006\" }}"), new PageValue(root), site, new Map()),
-    );
-    environment.templates.set("_partials/templates/_funcs/child", parseTemplate("child={{ . }}", "_partials/templates/_funcs/child.html"));
-    const parent = parseTemplate("{{ partial \"_funcs/child\" \"exact\" }}", "_partials/templates/parent.html");
-    const parentScope = new RenderScope(new PageValue(root), new PageValue(root), site, environment, undefined, undefined, parent.sourcePath);
-    const output = new TextBuilder();
-    parent.renderInto(output, parentScope, environment, new Map());
-    Assert.StringEqual("child=exact", output.toString());
-
-    const pageTemplate = parseTemplate("{{ .Render \"summary\" }}");
-    const pageOutput = new TextBuilder();
-    const pageScope = new RenderScope(new PageValue(newer), new PageValue(newer), site, environment, undefined);
-    pageTemplate.renderInto(pageOutput, pageScope, environment, new Map());
-    Assert.StringEqual("<summary>Newer</summary>", pageOutput.toString());
-  }
-
-  page_taxonomy_terms_follow_explicit_graph_relations(): void {
-    const site = createSite();
-    const page = createPage(site, "Article", "2024-01-01T00:00:00Z", "page");
-    const term = createPage(site, "TypeScript", "", "term");
-    const memberships = new Map<string, PageContext[]>();
-    memberships.set("typescript", [page]);
-    site.Taxonomies.set("tags", memberships);
-    const termPages = new Map<string, PageContext>();
-    termPages.set("typescript", term);
-    site.taxonomyTermPages.set("tags", termPages);
-
-    Assert.StringEqual(
-      "TypeScript;",
-      renderWithRoot("{{ range .GetTerms \"tags\" }}{{ .Title }};{{ end }}", new PageValue(page)),
-    );
-  }
-
-  template_definitions_propagate_across_partial_boundaries(): void {
-    const site = createSite();
-    const root = createPage(site, "Home", "", "home");
-    const environment = new TestTemplateEnvironment();
-    environment.templates.set(
-      "partials/child",
-      parseTemplate("{{ template \"integrity\" . }}", "partials/child"),
-    );
-
-    const parent = parseTemplate(
-      "{{ define \"integrity\" }}integrity={{ . }}{{ end }}{{ partial \"child\" \"external\" }}",
-      "partials/parent",
-    );
-    Assert.StringEqual(
-      "integrity=external",
-      environment.renderTemplate(parent, new PageValue(root), site, new Map()),
-    );
-
-    const inline = parseTemplate(
-      "{{ define \"_partials/inline\" }}inline={{ . }}{{ end }}{{ partials.IncludeCached \"inline\" \"local\" }}",
-      "partials/inline-owner",
-    );
-    Assert.StringEqual(
-      "inline=local",
-      environment.renderTemplate(inline, new PageValue(root), site, new Map()),
-    );
-
-    environment.templates.set(
-      "partials/page-global",
-      parseTemplate(
-        "{{ page.Title }}|{{ page.Store.Add \"visits\" 1 }}{{ page.Store.Get \"visits\" }}",
-        "partials/page-global",
-      ),
-    );
-    const contextual = parseTemplate("{{ partial \"page-global\" (dict \"context\" \"changed\") }}");
-    Assert.StringEqual(
-      "Home|1",
-      environment.renderTemplate(contextual, new PageValue(root), site, new Map()),
-    );
-  }
-
-  page_resources_use_the_published_bundle_inventory(): void {
-    const root = createTestDirectory("template-page-resources");
-    const siteDirectory = join(root, "site");
-    const bundleDirectory = join(siteDirectory, "content", "article");
-    const outputDirectory = join(root, "output");
-    try {
-      createDirectory(bundleDirectory);
-      writeTextFile(join(bundleDirectory, "cover.svg"), "<svg></svg>");
-      writeTextFile(join(bundleDirectory, "notes.txt"), "notes");
-
-      const manager = new ResourceManager(siteDirectory, undefined, outputDirectory);
-      const environment = new TestTemplateEnvironment(manager);
-      const site = createSite();
-      const page = createPage(site, "Article", "", "page");
-      page.relPermalink = "/article/";
-      page.resourceSourceDir = bundleDirectory;
-      const template = parseTemplate(
-        "{{ $images := .Resources.ByType \"image\" }}" +
-        "{{ with ($images.GetMatch \"*.svg\") }}{{ .RelPermalink }}{{ end }}|" +
-        "{{ with ($images.GetMatch \"{*cover*,*thumbnail*}\") }}{{ .RelPermalink }}{{ end }}|" +
-        "{{ with .Resources.Get \"notes.txt\" }}{{ .RelPermalink }}{{ end }}",
-      );
-
-      Assert.StringEqual(
-        "/article/cover.svg|/article/cover.svg|/article/notes.txt",
-        environment.renderTemplate(template, new PageValue(page), site, new Map()),
-      );
-    } finally {
-      deleteTestDirectory(root);
-    }
   }
 
   template_scanning_preserves_unicode_scalars_and_utf16_locations(): void {
@@ -646,6 +459,12 @@ export class TemplateRuntimeTests {
         render("{{ (\"value\").Missing \"argument\" }}");
       }),
     );
+    Assert.StringEqual(
+      "TSUMO_TEMPLATE_METHOD_UNKNOWN",
+      captureDiagnosticCode(() => {
+        render("{{ $value := slice \"item\" }}{{ $value.Missing \"argument\" }}");
+      }),
+    );
   }
 
   dictionary_values_are_resolved_without_name_fallbacks(): void {
@@ -668,9 +487,6 @@ export const runTemplateRuntimeTests = (): void => {
   });
   runTest("page HasShortcode uses the exact parsed page inventory", () => {
     tests.page_has_shortcode_uses_the_exact_parsed_page_inventory();
-  });
-  runTest("template namespaces expose exact string and Hugo functions", () => {
-    tests.template_namespaces_expose_exact_string_and_hugo_functions();
   });
   runTest("return evaluates its complete value expression", () => {
     tests.return_evaluates_its_complete_value_expression();
@@ -701,18 +517,6 @@ export const runTemplateRuntimeTests = (): void => {
   });
   runTest("template regular expression functions preserve matches, groups, and limits", () => {
     tests.template_regular_expression_functions_preserve_matches_groups_and_limits();
-  });
-  runTest("date, page data, and render methods use typed context", () => {
-    tests.date_page_data_and_render_methods_use_typed_context();
-  });
-  runTest("page taxonomy terms follow explicit graph relations", () => {
-    tests.page_taxonomy_terms_follow_explicit_graph_relations();
-  });
-  runTest("template definitions propagate across partial boundaries", () => {
-    tests.template_definitions_propagate_across_partial_boundaries();
-  });
-  runTest("page resources use the published bundle inventory", () => {
-    tests.page_resources_use_the_published_bundle_inventory();
   });
   runTest("template scanning preserves Unicode scalars and UTF-16 locations", () => {
     tests.template_scanning_preserves_unicode_scalars_and_utf16_locations();
