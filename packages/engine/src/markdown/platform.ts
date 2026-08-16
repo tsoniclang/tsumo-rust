@@ -1,4 +1,14 @@
-import { MarkdownDocument } from "@tsonic/rust/crates/tsumo_platform/index.js";
+import {
+  create_markdown_source_plan,
+  MarkdownBatch,
+  MarkdownDocument,
+  MarkdownSourcePlan,
+} from "@tsonic/rust/crates/tsumo_platform/index.js";
+
+export const createMarkdownBatch = (): MarkdownBatch => new MarkdownBatch();
+
+export const createMarkdownSourcePlan = (source: string): MarkdownSourcePlan =>
+  create_markdown_source_plan(source);
 
 export const createMarkdownDocument = (source: string): MarkdownDocument =>
   new MarkdownDocument(source);

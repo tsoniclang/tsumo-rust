@@ -1,9 +1,9 @@
 import type { int32 } from "@tsonic/core/types.js";
-import { MarkdownResult, renderMarkdownPlainText } from "../markdown.js";
-import { createMarkdownDocument } from "../markdown/platform.js";
+import { MarkdownResult } from "../markdown.js";
+import { createMarkdownDocument, createMarkdownSourcePlan } from "../markdown/platform.js";
 import { createTsumoError } from "../diagnostics.js";
 import { DocsMountConfig } from "./models.js";
-import { indexOfText, indexOfTextIgnoreCase, replaceLineEndings, substringCount, substringFrom, trimEndChar, trimStartChar } from "../utils/strings.js";
+import { substringFrom, trimEndChar, trimStartChar } from "../utils/strings.js";
 import { splitUrlSuffix } from "./url.js";
 
 export class DocsLinkRewriteContext {
@@ -169,21 +169,7 @@ const maybeRewriteUrl = (urlValue: string, ctx: DocsLinkRewriteContext): string 
   return undefined;
 };
 
-const normalizeNewlines = (text: string): string => replaceLineEndings(text, "\n");
-
-const summaryMarker = "<!--more-->";
-const summaryMarkerLength = summaryMarker.length;
-
-const findSummaryDividerIndex = (markdown: string): int32 => indexOfTextIgnoreCase(markdown, summaryMarker);
-
-const firstBlock = (markdown: string): string => {
-  const text = markdown.trim();
-  if (text === "") return "";
-  const idx = indexOfText(text, "\n\n");
-  return idx >= 0 ? substringCount(text, 0, idx) : text;
-};
-
-const renderWithRewrites = (markdown: string, ctx: DocsLinkRewriteContext): string => {
+const createDocumentWithRewrites = (markdown: string, ctx: DocsLinkRewriteContext) => {
   const document = createMarkdownDocument(markdown);
   const count: int32 = document.occurrence_count();
   for (let index: int32 = 0; index < count; index++) {
@@ -192,22 +178,17 @@ const renderWithRewrites = (markdown: string, ctx: DocsLinkRewriteContext): stri
     const updated = maybeRewriteUrl(occurrence.destination, ctx);
     if (updated !== undefined) document.replace_url(index, updated);
   }
-  return document.render();
+  return document;
 };
 
 export const renderDocsMarkdown = (markdownRaw: string, ctx: DocsLinkRewriteContext): MarkdownResult => {
-  const markdown = normalizeNewlines(markdownRaw);
-  const moreIndex = findSummaryDividerIndex(markdown);
-
-  if (moreIndex >= 0) {
-    const before = substringCount(markdown, 0, moreIndex);
-    const after = substringFrom(markdown, moreIndex + summaryMarkerLength);
-    const full = before + after;
-    return new MarkdownResult(renderWithRewrites(full, ctx), renderWithRewrites(before, ctx).trim(), renderMarkdownPlainText(full), "");
-  }
-
-  const html = renderWithRewrites(markdown, ctx);
-  const summarySource = firstBlock(markdown);
-  const summaryHtml = summarySource === "" ? "" : renderWithRewrites(summarySource, ctx).trim();
-  return new MarkdownResult(html, summaryHtml, renderMarkdownPlainText(markdown), "");
+  const sourcePlan = createMarkdownSourcePlan(markdownRaw);
+  const document = createDocumentWithRewrites(sourcePlan.full_source, ctx);
+  const html = document.render();
+  const summaryHtml = sourcePlan.summary_source === ""
+    ? ""
+    : sourcePlan.summary_source === sourcePlan.full_source
+      ? html.trim()
+      : createDocumentWithRewrites(sourcePlan.summary_source, ctx).render().trim();
+  return new MarkdownResult(html, summaryHtml, document.plain_text(), "");
 };

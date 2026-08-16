@@ -1891,6 +1891,7 @@ dependencies = [
  "pulldown-cmark",
  "regex",
  "tempfile",
+ "tsonic_rust_js",
  "tsonic_rust_runtime",
 ]
 

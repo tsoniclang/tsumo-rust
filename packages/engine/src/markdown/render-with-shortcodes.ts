@@ -2,12 +2,10 @@ import { parseShortcodes, ShortcodeCall } from "../shortcode.js";
 import { TemplateEnvironment } from "../template/environment.js";
 import { PageContext, SiteContext } from "../models.js";
 import { MarkdownResult } from "./result.js";
-import { generateTableOfContents } from "./toc.js";
 import { RenderHookContext, renderMarkdownWithHooks } from "./render-hooks.js";
-import { renderMarkdownHtml, renderMarkdownPlainText } from "./platform.js";
+import { createMarkdownDocument, createMarkdownSourcePlan } from "./platform.js";
 import { createOrdinalTracker, processShortcodeCalls, renderShortcode } from "./shortcodes.js";
-import { normalizeNewlines, findSummaryDividerIndex, summaryMarkerLength, firstBlock } from "./render-basic.js";
-import { substringCount, substringFrom } from "../utils/strings.js";
+import { replaceLineEndings, substringCount, substringFrom } from "../utils/strings.js";
 
 class ProtectedShortcode {
   marker: string;
@@ -82,7 +80,7 @@ export const renderMarkdownWithShortcodes = (
   site: SiteContext,
   env: TemplateEnvironment,
 ): MarkdownResult => {
-  const markdown = normalizeNewlines(markdownRaw);
+  const markdown = replaceLineEndings(markdownRaw, "\n");
   const ordinalTracker = createOrdinalTracker();
   const recursionGuard = new Map<string, boolean>();
 
@@ -110,7 +108,9 @@ export const renderMarkdownWithShortcodes = (
     );
   }
 
-  const parsedStandardCalls = parseShortcodes(textAfterMarkdownShortcodes, page.File?.Filename);
+  const parsedStandardCalls = mdCalls.length === 0
+    ? calls
+    : parseShortcodes(textAfterMarkdownShortcodes, page.File?.Filename);
   const standardCalls: ShortcodeCall[] = [];
   for (let i = 0; i < parsedStandardCalls.length; i++) {
     const call = parsedStandardCalls[i]!;
@@ -127,46 +127,29 @@ export const renderMarkdownWithShortcodes = (
   );
   const markdownSource = protectedStandard.source;
 
-  // Step 2: Generate TOC from text after markdown shortcodes (but before standard shortcodes)
-  const toc = generateTableOfContents(markdownSource);
+  const sourcePlan = createMarkdownSourcePlan(markdownSource);
+  const fullDocument = createMarkdownDocument(sourcePlan.full_source);
+  const toc = sourcePlan.full_source === sourcePlan.toc_source
+    ? fullDocument.table_of_contents()
+    : createMarkdownDocument(sourcePlan.toc_source).table_of_contents();
 
   // Step 3: Create render hook context
   const hookCtx = new RenderHookContext(page, site, env);
 
-  // Step 4: Render markdown with hooks (proper Markdig renderer extension approach)
-  const moreIndex = findSummaryDividerIndex(markdownSource);
-  let html: string;
+  const hasHooks = hookCtx.hasAnyHooks();
+  let html = hasHooks
+    ? renderMarkdownWithHooks(sourcePlan.full_source, hookCtx)
+    : fullDocument.render();
+  const plainText = fullDocument.plain_text();
   let summaryHtml: string;
-  let plainText: string;
-
-  if (moreIndex >= 0) {
-    const before = substringCount(markdownSource, 0, moreIndex);
-    const after = substringFrom(markdownSource, moreIndex + summaryMarkerLength);
-    const full = before + after;
-    // Use hook-aware rendering if hooks are present, otherwise use standard rendering
-    if (hookCtx.hasAnyHooks()) {
-      html = renderMarkdownWithHooks(full, hookCtx);
-      summaryHtml = renderMarkdownWithHooks(before, hookCtx).trim();
-    } else {
-      html = renderMarkdownHtml(full);
-      summaryHtml = renderMarkdownHtml(before).trim();
-    }
-    plainText = renderMarkdownPlainText(full);
+  if (sourcePlan.summary_source === "") {
+    summaryHtml = "";
+  } else if (sourcePlan.summary_source === sourcePlan.full_source) {
+    summaryHtml = html.trim();
+  } else if (hasHooks) {
+    summaryHtml = renderMarkdownWithHooks(sourcePlan.summary_source, hookCtx).trim();
   } else {
-    if (hookCtx.hasAnyHooks()) {
-      html = renderMarkdownWithHooks(markdownSource, hookCtx);
-    } else {
-      html = renderMarkdownHtml(markdownSource);
-    }
-    plainText = renderMarkdownPlainText(markdownSource);
-    const summarySource = firstBlock(markdownSource);
-    if (summarySource === "") {
-      summaryHtml = "";
-    } else if (hookCtx.hasAnyHooks()) {
-      summaryHtml = renderMarkdownWithHooks(summarySource, hookCtx).trim();
-    } else {
-      summaryHtml = renderMarkdownHtml(summarySource).trim();
-    }
+    summaryHtml = createMarkdownDocument(sourcePlan.summary_source).render().trim();
   }
 
   // Step 5: Restore standard-notation shortcode output without Markdown processing.
