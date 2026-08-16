@@ -117,6 +117,32 @@ test("renders shortcodes, Markdown hooks, and fingerprinted resources", () => {
   assert.equal(readFileSync(join(outDir, resourceMatch[1]), "utf8"), "body { color: rebeccapurple; }\n");
 });
 
+test("renders a large plain Markdown batch with exact page ownership", () => {
+  const site = copyFixture(join(repoRoot, "examples/basic-blog"), "tsumo-e2e-markdown-batch-");
+  const outDir = makeTempDir("tsumo-e2e-markdown-batch-out-");
+  mkdirSync(join(site, "content/batch"), { recursive: true });
+  for (let index = 0; index < 70; index++) {
+    const ordinal = `${index}`.padStart(2, "0");
+    writeFileSync(
+      join(site, `content/batch/page-${ordinal}.md`),
+      `---\ntitle: "Batch ${ordinal}"\ndate: 2026-01-01\n---\n\n# Heading ${ordinal}\n\nBody ${ordinal}.\n`,
+    );
+  }
+
+  const result = runTsumo(["build", "--source", site, "--destination", outDir]);
+  assert.equal(result.status, 0, result.stderr);
+  for (const ordinal of ["00", "35", "69"]) {
+    const output = readFileSync(join(outDir, `batch/page-${ordinal}/index.html`), "utf8");
+    assert.match(
+      output,
+      new RegExp(`<h1 id="heading-${ordinal}">Heading ${ordinal}</h1>[\\s\\S]*<p>Body ${ordinal}\\.</p>`, "u"),
+    );
+    for (const other of ["00", "35", "69"]) {
+      if (other !== ordinal) assert.doesNotMatch(output, new RegExp(`Heading ${other}`, "u"));
+    }
+  }
+});
+
 test("omits drafts by default and includes them with --buildDrafts", () => {
   const site = copyFixture(join(repoRoot, "examples/basic-blog"), "tsumo-e2e-drafts-");
   const outDefault = makeTempDir("tsumo-e2e-drafts-out1-");

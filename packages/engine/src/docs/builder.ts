@@ -6,7 +6,6 @@ import { SiteOutputPlan } from "../build/output-plan.js";
 import { loadSiteConfig } from "../config.js";
 import { createTsumoError } from "../diagnostics.js";
 import { BuildEnvironment } from "../env.js";
-import { renderMarkdownPlainText } from "../markdown.js";
 import { BuildRequest, PageContext, PageFile, SiteContext } from "../models.js";
 import { ParamValue } from "../params.js";
 import { HtmlString } from "../utils/html.js";
@@ -116,7 +115,7 @@ export const buildDocsSite = (request: BuildRequest, docsLoaded: LoadedDocsConfi
       );
       const content = new HtmlString(md.html);
       const summary = new HtmlString(md.summaryHtml);
-      const plainText = renderMarkdownPlainText(parsed.body);
+      const plainText = md.plainText;
 
       const baseName = withoutMarkdownExtension(r.fileName);
       const title = fm.title ?? humanizeSlug(baseName);
@@ -266,7 +265,7 @@ export const buildDocsSite = (request: BuildRequest, docsLoaded: LoadedDocsConfi
           summary = new HtmlString(md.summaryHtml);
           description = fm.description ?? "";
           title = fm.title ?? title;
-          const plainText = renderMarkdownPlainText(parsed.body);
+          const plainText = md.plainText;
           plain = plainText;
           searchDocs.push(new SearchDocument(title, relPermalink, mount.name, plainText));
           const dateUtc = fm.date ?? idxRoute.modifiedAt;

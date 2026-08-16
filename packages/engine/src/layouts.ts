@@ -18,9 +18,13 @@ export class LayoutEnvironment extends TemplateEnvironment {
   siteLayoutsDir: string;
   themeLayoutsDir: string | undefined;
   mountedLayoutDirs: string[];
-  cache: Map<string, Template>;
-  shortcodeCache: Map<string, Template>;
-  renderHookCache: Map<string, Template>;
+  parsedTemplateBySource: Map<string, Template>;
+  templateByLogicalPath: Map<string, Template>;
+  missingLogicalTemplatePaths: Set<string>;
+  shortcodeTemplateByName: Map<string, Template>;
+  missingShortcodeNames: Set<string>;
+  renderHookTemplateByName: Map<string, Template>;
+  missingRenderHookNames: Set<string>;
   i18nStore: I18nStore;
 
   constructor(siteDir: string, themeDirRaw: string | undefined, mountsRaw?: ModuleMount[], buildTime?: Date, siteData?: DictValue) {
@@ -30,9 +34,13 @@ export class LayoutEnvironment extends TemplateEnvironment {
     this.siteLayoutsDir = join(siteDir, "layouts");
     this.themeLayoutsDir = themeDir !== undefined ? join(themeDir, "layouts") : undefined;
     this.mountedLayoutDirs = [];
-    this.cache = new Map<string, Template>();
-    this.shortcodeCache = new Map<string, Template>();
-    this.renderHookCache = new Map<string, Template>();
+    this.parsedTemplateBySource = new Map<string, Template>();
+    this.templateByLogicalPath = new Map<string, Template>();
+    this.missingLogicalTemplatePaths = new Set<string>();
+    this.shortcodeTemplateByName = new Map<string, Template>();
+    this.missingShortcodeNames = new Set<string>();
+    this.renderHookTemplateByName = new Map<string, Template>();
+    this.missingRenderHookNames = new Set<string>();
     this.i18nStore = new I18nStore();
     if (themeDir !== undefined) {
       this.i18nStore.loadFromDir(join(themeDir, "i18n"));
@@ -116,6 +124,9 @@ export class LayoutEnvironment extends TemplateEnvironment {
   getTemplate(relPathRaw: string): Template | undefined {
     const slash = "/";
     const relPath = normalizeTemplateRelativePath(trimStartChar(relPathRaw, slash).trim());
+    const logicalCached = this.templateByLogicalPath.get(relPath);
+    if (logicalCached !== undefined) return logicalCached;
+    if (this.missingLogicalTemplatePaths.has(relPath)) return undefined;
     const relativePaths: string[] = [];
     if (extname(relPath) !== "") relativePaths.push(relPath);
     else {
@@ -157,21 +168,32 @@ export class LayoutEnvironment extends TemplateEnvironment {
         embeddedSource = candidateSource;
         break;
       }
-      if (embeddedSource === undefined || embeddedPath === undefined) return undefined;
+      if (embeddedSource === undefined || embeddedPath === undefined) {
+        this.missingLogicalTemplatePaths.add(relPath);
+        return undefined;
+      }
       const embeddedKey = `embedded:${embeddedPath.toLowerCase()}`;
-      const embeddedCached = this.cache.get(embeddedKey);
-      if (embeddedCached !== undefined) return embeddedCached;
+      const embeddedCached = this.parsedTemplateBySource.get(embeddedKey);
+      if (embeddedCached !== undefined) {
+        this.templateByLogicalPath.set(relPath, embeddedCached);
+        return embeddedCached;
+      }
       const embedded = parseTemplate(embeddedSource, embeddedKey);
-      this.cache.set(embeddedKey, embedded);
+      this.parsedTemplateBySource.set(embeddedKey, embedded);
+      this.templateByLogicalPath.set(relPath, embedded);
       return embedded;
     }
 
-    const cached = this.cache.get(resolved);
-    if (cached !== undefined) return cached;
+    const cached = this.parsedTemplateBySource.get(resolved);
+    if (cached !== undefined) {
+      this.templateByLogicalPath.set(relPath, cached);
+      return cached;
+    }
 
     const text = readTextFile(resolved);
     const tpl = parseTemplate(text, resolved);
-    this.cache.set(resolved, tpl);
+    this.parsedTemplateBySource.set(resolved, tpl);
+    this.templateByLogicalPath.set(relPath, tpl);
     return tpl;
   }
 
@@ -209,8 +231,9 @@ export class LayoutEnvironment extends TemplateEnvironment {
   }
 
   getShortcodeTemplate(name: string): Template | undefined {
-    const cached = this.shortcodeCache.get(name);
+    const cached = this.shortcodeTemplateByName.get(name);
     if (cached !== undefined) return cached;
+    if (this.missingShortcodeNames.has(name)) return undefined;
 
     const candidates: string[] = [
       join(this.siteLayoutsDir, "shortcodes", name + ".html"),
@@ -235,16 +258,20 @@ export class LayoutEnvironment extends TemplateEnvironment {
         break;
       }
     }
-    if (resolved === undefined) return undefined;
+    if (resolved === undefined) {
+      this.missingShortcodeNames.add(name);
+      return undefined;
+    }
 
     const tpl = parseTemplate(readTextFile(resolved), resolved);
-    this.shortcodeCache.set(name, tpl);
+    this.shortcodeTemplateByName.set(name, tpl);
     return tpl;
   }
 
   getRenderHookTemplate(hookName: string): Template | undefined {
-    const cached = this.renderHookCache.get(hookName);
+    const cached = this.renderHookTemplateByName.get(hookName);
     if (cached !== undefined) return cached;
+    if (this.missingRenderHookNames.has(hookName)) return undefined;
 
     const candidates: string[] = [
       join(this.siteLayoutsDir, "_markup", hookName + ".html"),
@@ -269,10 +296,13 @@ export class LayoutEnvironment extends TemplateEnvironment {
         break;
       }
     }
-    if (resolved === undefined) return undefined;
+    if (resolved === undefined) {
+      this.missingRenderHookNames.add(hookName);
+      return undefined;
+    }
 
     const tpl = parseTemplate(readTextFile(resolved), resolved);
-    this.renderHookCache.set(hookName, tpl);
+    this.renderHookTemplateByName.set(hookName, tpl);
     return tpl;
   }
 
