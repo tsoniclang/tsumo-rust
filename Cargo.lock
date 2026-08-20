@@ -1880,6 +1880,7 @@ dependencies = [
  "tsonic_rust_node",
  "tsonic_rust_runtime",
  "tsumo-platform",
+ "tsumo_engine",
 ]
 
 [[package]]
@@ -1914,6 +1915,7 @@ dependencies = [
  "tsonic_rust_node",
  "tsonic_rust_runtime",
  "tsumo-platform",
+ "tsumo_engine",
 ]
 
 [[package]]

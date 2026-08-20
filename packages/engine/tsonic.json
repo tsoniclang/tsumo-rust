@@ -1,6 +1,7 @@
 {
   "$schema": "https://tsonic.org/schema/v1.json",
   "entryPoint": "index.ts",
+  "rootFiles": ["index.ts", "testing.ts"],
   "rootDir": "src",
   "outDir": "out",
   "targets": [
