@@ -16,6 +16,7 @@
   "devDependencies": {
     "@tsonic/cli": "file:../tsonic/packages/cli",
     "@tsonic/host": "file:../tsonic/packages/host",
+    "@tsonic/js-source-profile": "file:../tsonic/packages/js-source-profile",
     "@tsonic/rust-js": "file:../rust-js",
     "@tsonic/rust-nodejs": "file:../rust-nodejs",
     "@tsonic/rust-runtime": "file:../rust-runtime",
