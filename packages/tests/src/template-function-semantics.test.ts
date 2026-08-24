@@ -19,6 +19,12 @@ export class TemplateFunctionSemanticsTests {
       render("{{ hugo.Generator }}"),
     );
     Assert.StringEqual(
+      "TSUMO_TEMPLATE_VERSION_COMPONENT_OUT_OF_RANGE",
+      captureDiagnosticCode(() => {
+        render("{{ lt hugo.Version \"2147483648.0\" }}");
+      }),
+    );
+    Assert.StringEqual(
       "TSUMO_TEMPLATE_STRING_REPEAT_INVALID",
       captureDiagnosticCode(() => {
         render("{{ strings.Repeat -1 \"=\" }}");
@@ -40,6 +46,14 @@ export class TemplateFunctionSemanticsTests {
     Assert.StringEqual("one two|first|one two|url.Values", render(
       "{{ $url := urls.Parse \"/page?classes=one+two&name=first&name=second\" }}" +
       "{{ $url.Query.Get \"classes\" }}|{{ $url.Query.Get \"name\" }}|{{ $url.Query.classes }}|{{ printf \"%T\" $url.Query }}",
+    ));
+    Assert.StringEqual("false|||/page|name=value|top", render(
+      "{{ $url := urls.Parse \"/page?name=value#top\" }}" +
+      "{{ $url.IsAbs }}|{{ $url.Scheme }}|{{ $url.Host }}|{{ $url.Path }}|{{ $url.RawQuery }}|{{ $url.Fragment }}",
+    ));
+    Assert.StringEqual("true|https|example.test:8443|/page|name=value|top", render(
+      "{{ $url := urls.Parse \"https://example.test:8443/page?name=value#top\" }}" +
+      "{{ $url.IsAbs }}|{{ $url.Scheme }}|{{ $url.Host }}|{{ $url.Path }}|{{ $url.RawQuery }}|{{ $url.Fragment }}",
     ));
     Assert.StringEqual("", render("{{ $url := urls.Parse \"/page?name=value\" }}{{ $url.Query.Get \"missing\" }}"));
     Assert.StringEqual("🙂", render("{{ $url := urls.Parse \"/page?name=%F0%9F%99%82\" }}{{ $url.Query.Get \"name\" }}"));

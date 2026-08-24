@@ -1,13 +1,11 @@
-import type { UrlObject } from "node:url";
+import type { UrlWithStringQuery } from "node:url";
 import { TemplateValue } from "./base.js";
 
-const trimLeadingCharacter = (value: string, character: string): string => {
-  return value.startsWith(character) ? value.slice(character.length) : value;
-};
+const trimLeadingCharacter = (value: string, character: string): string =>
+  value.startsWith(character) ? value.slice(character.length) : value;
 
-const trimTrailingCharacter = (value: string, character: string): string => {
-  return value.endsWith(character) ? value.slice(0, value.length - character.length) : value;
-};
+const trimTrailingCharacter = (value: string, character: string): string =>
+  value.endsWith(character) ? value.slice(0, value.length - character.length) : value;
 
 export class ParsedUrl {
   originalString: string;
@@ -18,14 +16,19 @@ export class ParsedUrl {
   rawQuery: string;
   fragment: string;
 
-  constructor(originalString: string, value: UrlObject) {
+  constructor(originalString: string, value: UrlWithStringQuery) {
+    const protocol = value.protocol ?? "";
+    const host = value.host ?? "";
+    const pathname = value.pathname ?? "";
+    const search = value.search ?? "";
+    const hash = value.hash ?? "";
     this.originalString = originalString;
-    this.absolute = value.protocol !== "";
-    this.scheme = trimTrailingCharacter(value.protocol, ":");
-    this.host = value.hostname;
-    this.path = value.pathname;
-    this.rawQuery = trimLeadingCharacter(value.search, "?");
-    this.fragment = trimLeadingCharacter(value.hash, "#");
+    this.absolute = protocol !== "";
+    this.scheme = trimTrailingCharacter(protocol, ":");
+    this.host = host;
+    this.path = pathname;
+    this.rawQuery = trimLeadingCharacter(search, "?");
+    this.fragment = trimLeadingCharacter(hash, "#");
   }
 }
 

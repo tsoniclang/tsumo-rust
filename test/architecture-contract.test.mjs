@@ -68,6 +68,83 @@ test("product source does not bypass shared recursive filesystem traversal", () 
   assert.deepEqual(violations, []);
 });
 
+test("filesystem calls use standard Node option objects", () => {
+  const violations = sourceFiles.flatMap((path) => {
+    const text = readFileSync(join(repoRoot, path), "utf8");
+    return /\b(?:mkdirSync|rmSync)\([^\n,]+,\s*(?:true|false)\s*\)/u.test(text)
+      ? [`${path}: uses a provider-private boolean filesystem overload`]
+      : [];
+  });
+  assert.deepEqual(violations, []);
+});
+
+test("target-native dependencies stay behind explicit Rust platform boundaries", () => {
+  const allowedPlatformFiles = new Set([
+    "packages/engine/src/markdown/platform.ts",
+    "packages/engine/src/resources/image-provider.ts",
+    "packages/engine/src/utils/html.ts",
+    "packages/engine/src/utils/text-builder.ts",
+    "packages/engine/src/utils/url-components.ts",
+  ]);
+  const violations = [];
+  for (const path of sourceFiles) {
+    const text = readFileSync(join(repoRoot, path), "utf8");
+    for (const match of text.matchAll(/(?:from\s+|import\s*\()\s*["'](@tsonic\/rust\/[^"']+)["']/gu)) {
+      if (
+        !allowedPlatformFiles.has(path) ||
+        match[1] !== "@tsonic/rust/crates/tsumo_platform/index.js"
+      ) {
+        violations.push(`${path}: imports ${match[1]} outside a Rust platform boundary`);
+      }
+    }
+    if (
+      !allowedPlatformFiles.has(path) &&
+      (
+        /\b(?:JavaScriptCompiler|MarkdownBatchResult|MarkdownDocument|SassCompiler|TextBuilderState)\b/u.test(text) ||
+        /\.(?:add_source|full_source|occurrence_count|occurrence_html|plain_text|replace_html|replace_url|summary_source|table_of_contents|take_result|toc_source)\b/u.test(text)
+      )
+    ) {
+      violations.push(`${path}: references a Rust platform contract outside its boundary`);
+    }
+  }
+  assert.deepEqual(violations, []);
+});
+
+test("portable external-tool orchestration uses the Node capability", () => {
+  const resources = join(repoRoot, "packages/engine/src/resources");
+  const externalProcess = readFileSync(join(resources, "external-process.ts"), "utf8");
+  assert.match(externalProcess, /from\s+["']node:child_process["']/u);
+  assert.match(externalProcess, /\bspawnSync\s*\(/u);
+  for (const fileName of ["sass-provider.ts", "javascript-provider.ts"]) {
+    const text = readFileSync(join(resources, fileName), "utf8");
+    assert.match(text, /runExternalProcess\s*\(/u, fileName);
+    assert.doesNotMatch(
+      text,
+      /@tsonic\/rust\/|\b(?:SassCompiler|JavaScriptCompiler)\b/u,
+      fileName,
+    );
+  }
+
+  const platform = readFileSync(
+    join(repoRoot, "crates/tsumo_platform/src/lib.rs"),
+    "utf8",
+  );
+  assert.doesNotMatch(
+    platform,
+    /\b(?:SassCompiler|JavaScriptCompiler)\b|\bstd::process\b|\btempfile::/u,
+  );
+});
+
+test("regular expression helpers use only the shared JavaScript contract", () => {
+  const source = readFileSync(
+    join(repoRoot, "packages/engine/src/utils/regular-expressions.ts"),
+    "utf8",
+  );
+  assert.match(source, /new RegExp\(/u);
+  assert.match(source, /\.matchAll\(/u);
+  assert.doesNotMatch(source, /@tsonic\/dotnet\/|@tsonic\/rust\//u);
+});
+
 test("compiler projects use one current Rust source and target contract", () => {
   const expectedCrates = new Map([
     ["engine", { crateName: "tsumo_engine", outputType: "lib" }],
@@ -116,9 +193,10 @@ test("the Rust workspace owns one lockfile and one native platform boundary", ()
   assert.deepEqual(repositoryFiles.filter((path) => path.endsWith("Cargo.lock")), ["Cargo.lock"]);
 
   const platform = readFileSync(join(repoRoot, "crates/tsumo_platform/Cargo.toml"), "utf8");
-  for (const dependency of ["html-escape", "image", "pulldown-cmark", "regex"]) {
+  for (const dependency of ["html-escape", "image", "linkify", "pulldown-cmark"]) {
     assert.match(platform, new RegExp(`^${dependency}\\s*=`, "mu"));
   }
+  assert.doesNotMatch(platform, /^(?:regex|tempfile)\s*=/mu);
 });
 
 test("retired C# build and provider infrastructure cannot return", () => {

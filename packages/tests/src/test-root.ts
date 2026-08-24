@@ -46,12 +46,12 @@ export const createTestDirectory = (name: string): string => {
     throw new Error("TSUMO_TEST_ROOT must name the test-owned scratch directory");
   }
   const root = resolve(configuredRoot);
-  mkdirSync(root, true);
+  mkdirSync(root, { recursive: true });
   return mkdtempSync(join(root, `${name}-`));
 };
 
 export const createDirectory = (path: string): void => {
-  mkdirSync(path, true);
+  mkdirSync(path, { recursive: true });
 };
 
 export const writeTextFile = (path: string, content: string): void => {
@@ -71,7 +71,7 @@ export const createSymbolicLink = (target: string, path: string): void => {
 };
 
 export const deleteTestDirectory = (path: string): void => {
-  rmSync(path, true);
+  rmSync(path, { recursive: true, force: true });
 };
 
 export const runTest = (name: string, operation: () => void): void => {

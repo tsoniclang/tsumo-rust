@@ -2,17 +2,12 @@
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
-use std::fs;
-use std::io::Write;
-use std::path::Path;
-use std::process::{Command, Stdio};
 use std::rc::Rc;
 
 use image::ImageFormat;
 use image::imageops::FilterType;
 use linkify::{LinkFinder, LinkKind};
 use pulldown_cmark::{CowStr, Event, HeadingLevel, LinkType, Options, Parser, Tag, TagEnd, html};
-use regex::Regex;
 use tsonic_rust_js::string as js_string;
 use tsonic_rust_runtime::{TsonicError, TsonicResult};
 
@@ -156,79 +151,94 @@ impl Default for MarkdownBatch {
     }
 }
 
-pub struct MarkdownDocument {
+struct MarkdownDocumentState {
     events: Vec<Event<'static>>,
     occurrences: Vec<InternalOccurrence>,
     modifications: BTreeMap<usize, MarkdownModification>,
+}
+
+#[derive(Clone)]
+pub struct MarkdownDocument {
+    state: Rc<RefCell<MarkdownDocumentState>>,
 }
 
 impl MarkdownDocument {
     pub fn new(source: &str) -> Self {
         let (events, occurrences) = operation_events(source);
         Self {
-            events,
-            occurrences,
-            modifications: BTreeMap::new(),
+            state: Rc::new(RefCell::new(MarkdownDocumentState {
+                events,
+                occurrences,
+                modifications: BTreeMap::new(),
+            })),
         }
     }
 
     pub fn occurrence_count(&self) -> i32 {
-        self.occurrences.len() as i32
+        self.state.borrow().occurrences.len() as i32
     }
 
     pub fn occurrence(&self, index: i32) -> TsonicResult<MarkdownOccurrence> {
-        let index = checked_index(index, self.occurrences.len())?;
-        Ok(self.occurrences[index].clone().into())
+        let state = self.state.borrow();
+        let index = checked_index(index, state.occurrences.len())?;
+        Ok(state.occurrences[index].clone().into())
     }
 
-    pub fn replace_html(&mut self, index: i32, value: &str) -> TsonicResult<()> {
-        let index = checked_index(index, self.occurrences.len())?;
-        self.modifications
+    pub fn replace_html(&self, index: i32, value: &str) -> TsonicResult<()> {
+        let mut state = self.state.borrow_mut();
+        let index = checked_index(index, state.occurrences.len())?;
+        state
+            .modifications
             .insert(index, MarkdownModification::Html(value.to_owned()));
         Ok(())
     }
 
-    pub fn replace_url(&mut self, index: i32, value: &str) -> TsonicResult<()> {
-        let index = checked_index(index, self.occurrences.len())?;
-        let occurrence = &self.occurrences[index];
+    pub fn replace_url(&self, index: i32, value: &str) -> TsonicResult<()> {
+        let mut state = self.state.borrow_mut();
+        let index = checked_index(index, state.occurrences.len())?;
+        let occurrence = &state.occurrences[index];
         if occurrence.kind != "link" && occurrence.kind != "image" {
             return Err(platform_error(
                 "only link and image occurrences have replaceable URLs",
             ));
         }
-        self.modifications
+        state
+            .modifications
             .insert(index, MarkdownModification::Url(value.to_owned()));
         Ok(())
     }
 
     pub fn occurrence_html(&self, index: i32) -> TsonicResult<String> {
-        let index = checked_index(index, self.occurrences.len())?;
-        let occurrence = &self.occurrences[index];
+        let state = self.state.borrow();
+        let index = checked_index(index, state.occurrences.len())?;
+        let occurrence = &state.occurrences[index];
         Ok(render_event_range(
-            &self.events,
-            &self.occurrences,
-            &self.modifications,
+            &state.events,
+            &state.occurrences,
+            &state.modifications,
             occurrence.start_event + 1,
             occurrence.end_event,
         ))
     }
 
     pub fn render(&self) -> String {
+        let state = self.state.borrow();
         render_event_range(
-            &self.events,
-            &self.occurrences,
-            &self.modifications,
+            &state.events,
+            &state.occurrences,
+            &state.modifications,
             0,
-            self.events.len(),
+            state.events.len(),
         )
     }
 
     pub fn plain_text(&self) -> String {
-        plain_text(&self.events).trim().to_owned()
+        plain_text(&self.state.borrow().events).trim().to_owned()
     }
 
     pub fn table_of_contents(&self) -> String {
-        let headings = self
+        let state = self.state.borrow();
+        let headings = state
             .occurrences
             .iter()
             .filter(|occurrence| occurrence.kind == "heading")
@@ -873,228 +883,6 @@ fn render_table_of_contents(headings: &[InternalOccurrence]) -> String {
     output
 }
 
-pub struct SassCompiler {
-    source: String,
-    executable: String,
-    implementation: String,
-    load_paths: Vec<String>,
-}
-
-impl SassCompiler {
-    pub fn new(source: &str, executable: &str, implementation: &str) -> Self {
-        Self {
-            source: source.to_owned(),
-            executable: executable.to_owned(),
-            implementation: implementation.to_owned(),
-            load_paths: Vec::new(),
-        }
-    }
-
-    pub fn add_load_path(&mut self, path: &str) {
-        self.load_paths.push(path.to_owned());
-    }
-
-    pub fn compile(&self) -> TsonicResult<String> {
-        match self.implementation.as_str() {
-            "dart-sass" => self.compile_dart_sass(),
-            "libsass" => self.compile_libsass(),
-            implementation => Err(platform_error(format!(
-                "unsupported Sass implementation '{implementation}'"
-            ))),
-        }
-    }
-
-    fn compile_dart_sass(&self) -> TsonicResult<String> {
-        let mut command = Command::new(&self.executable);
-        command.args(["--no-source-map", "--style", "expanded", "--stdin"]);
-        for path in &self.load_paths {
-            command.arg("--load-path").arg(path);
-        }
-        command
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-        let mut child = command.spawn().map_err(|error| {
-            platform_error(format!(
-                "failed to start Sass compiler '{}': {error}",
-                self.executable
-            ))
-        })?;
-        child
-            .stdin
-            .as_mut()
-            .ok_or_else(|| platform_error("Sass compiler stdin was not available"))?
-            .write_all(self.source.as_bytes())
-            .map_err(|error| platform_error(format!("failed to write Sass input: {error}")))?;
-        let output = child.wait_with_output().map_err(|error| {
-            platform_error(format!("failed to wait for Sass compiler: {error}"))
-        })?;
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_owned();
-            return Err(platform_error(if stderr.is_empty() {
-                format!("Sass compiler failed with status {}", output.status)
-            } else {
-                stderr
-            }));
-        }
-        String::from_utf8(output.stdout)
-            .map_err(|_| platform_error("Sass compiler output was not valid UTF-8"))
-    }
-
-    fn compile_libsass(&self) -> TsonicResult<String> {
-        let work_directory = tempfile::tempdir().map_err(|error| {
-            platform_error(format!("failed to create Sass work directory: {error}"))
-        })?;
-        let input_path = work_directory.path().join("input.scss");
-        let output_path = work_directory.path().join("output.css");
-        fs::write(&input_path, self.source.as_bytes())
-            .map_err(|error| platform_error(format!("failed to write Sass input: {error}")))?;
-
-        let mut command = Command::new(&self.executable);
-        command.args(["-t", "expanded"]);
-        for path in &self.load_paths {
-            command.arg("-I").arg(path);
-        }
-        let output = command
-            .arg(&input_path)
-            .arg(&output_path)
-            .output()
-            .map_err(|error| {
-                platform_error(format!(
-                    "failed to start Sass compiler '{}': {error}",
-                    self.executable
-                ))
-            })?;
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_owned();
-            return Err(platform_error(if stderr.is_empty() {
-                format!("Sass compiler failed with status {}", output.status)
-            } else {
-                stderr
-            }));
-        }
-        fs::read_to_string(&output_path)
-            .map_err(|error| platform_error(format!("failed to read Sass output: {error}")))
-    }
-}
-
-pub struct JavaScriptCompiler {
-    source: String,
-    executable: String,
-    source_path: String,
-    extension: String,
-    minify: bool,
-    format: String,
-    target: String,
-    platform: String,
-    params_json: String,
-    jsx_factory: String,
-}
-
-impl JavaScriptCompiler {
-    pub fn new(source: &str, executable: &str, source_path: &str, extension: &str) -> Self {
-        Self {
-            source: source.to_owned(),
-            executable: executable.to_owned(),
-            source_path: source_path.to_owned(),
-            extension: extension.to_owned(),
-            minify: false,
-            format: "iife".to_owned(),
-            target: "esnext".to_owned(),
-            platform: "browser".to_owned(),
-            params_json: String::new(),
-            jsx_factory: String::new(),
-        }
-    }
-
-    pub fn set_minify(&mut self, value: bool) {
-        self.minify = value;
-    }
-
-    pub fn set_format(&mut self, value: &str) {
-        self.format = value.to_owned();
-    }
-
-    pub fn set_target(&mut self, value: &str) {
-        self.target = value.to_owned();
-    }
-
-    pub fn set_platform(&mut self, value: &str) {
-        self.platform = value.to_owned();
-    }
-
-    pub fn set_params_json(&mut self, value: &str) {
-        self.params_json = value.to_owned();
-    }
-
-    pub fn set_jsx_factory(&mut self, value: &str) {
-        self.jsx_factory = value.to_owned();
-    }
-
-    pub fn compile(&self) -> TsonicResult<String> {
-        let extension = match self.extension.as_str() {
-            ".ts" | ".tsx" | ".jsx" => self.extension.as_str(),
-            _ => ".js",
-        };
-        let work_directory = tempfile::tempdir().map_err(|error| {
-            platform_error(format!("failed to create esbuild work directory: {error}"))
-        })?;
-        let temporary_input = work_directory.path().join(format!("input{extension}"));
-        let original_input = Path::new(&self.source_path);
-        let input_path = if !self.source_path.is_empty()
-            && original_input.is_file()
-            && fs::read_to_string(original_input).ok().as_deref() == Some(self.source.as_str())
-        {
-            original_input.to_path_buf()
-        } else {
-            fs::write(&temporary_input, self.source.as_bytes()).map_err(|error| {
-                platform_error(format!("failed to write esbuild input: {error}"))
-            })?;
-            temporary_input
-        };
-        let output_path = work_directory.path().join("output.js");
-        let mut command = Command::new(&self.executable);
-        command
-            .arg(&input_path)
-            .arg("--bundle")
-            .arg(format!("--outfile={}", output_path.display()))
-            .arg(format!("--format={}", self.format))
-            .arg(format!("--target={}", self.target))
-            .arg(format!("--platform={}", self.platform))
-            .arg("--charset=utf8")
-            .arg("--log-level=warning");
-        if self.minify {
-            command.arg("--minify");
-        }
-        if !self.jsx_factory.is_empty() {
-            command.arg(format!("--jsx-factory={}", self.jsx_factory));
-        }
-        if !self.params_json.is_empty() {
-            let params_path = work_directory.path().join("params.json");
-            fs::write(&params_path, self.params_json.as_bytes()).map_err(|error| {
-                platform_error(format!("failed to write esbuild params module: {error}"))
-            })?;
-            command.arg(format!("--alias:@params={}", params_path.display()));
-        }
-        let output = command.output().map_err(|error| {
-            platform_error(format!(
-                "failed to start esbuild '{}': {error}",
-                self.executable
-            ))
-        })?;
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_owned();
-            return Err(platform_error(if stderr.is_empty() {
-                format!("esbuild failed with status {}", output.status)
-            } else {
-                stderr
-            }));
-        }
-        fs::read_to_string(&output_path)
-            .map_err(|error| platform_error(format!("failed to read esbuild output: {error}")))
-    }
-}
-
 pub fn resize_image(
     input_path: &str,
     output_path: &str,
@@ -1127,163 +915,8 @@ pub fn resize_image(
         .map_err(|error| platform_error(format!("failed to encode image: {error}")))
 }
 
-pub fn replace_regex(pattern: &str, replacement: &str, input: &str) -> TsonicResult<String> {
-    let expression = Regex::new(pattern)
-        .map_err(|error| platform_error(format!("invalid regular expression: {error}")))?;
-    Ok(expression.replace_all(input, replacement).into_owned())
-}
-
-pub fn replace_regex_limited(
-    pattern: &str,
-    replacement: &str,
-    input: &str,
-    limit: i32,
-) -> TsonicResult<String> {
-    let expression = Regex::new(pattern)
-        .map_err(|error| platform_error(format!("invalid regular expression: {error}")))?;
-    if limit < 0 {
-        return Ok(expression.replace_all(input, replacement).into_owned());
-    }
-    let count = usize::try_from(limit)
-        .map_err(|_| platform_error("regular expression replacement limit is invalid"))?;
-    Ok(expression.replacen(input, count, replacement).into_owned())
-}
-
-pub fn find_regex_matches(pattern: &str, input: &str, limit: i32) -> TsonicResult<Vec<String>> {
-    let expression = Regex::new(pattern)
-        .map_err(|error| platform_error(format!("invalid regular expression: {error}")))?;
-    let maximum = if limit < 0 {
-        usize::MAX
-    } else {
-        usize::try_from(limit)
-            .map_err(|_| platform_error("regular expression match limit is invalid"))?
-    };
-    Ok(expression
-        .find_iter(input)
-        .take(maximum)
-        .map(|matched| matched.as_str().to_owned())
-        .collect())
-}
-
-pub struct RegexSubmatches {
-    rows: Vec<Vec<String>>,
-}
-
-impl RegexSubmatches {
-    pub fn has_rows(&self) -> bool {
-        !self.rows.is_empty()
-    }
-
-    pub fn pop_row(&mut self) -> TsonicResult<RegexSubmatchRow> {
-        self.rows
-            .pop()
-            .map(|groups| RegexSubmatchRow { groups })
-            .ok_or_else(|| platform_error("regular expression submatch collection is empty"))
-    }
-}
-
-pub struct RegexSubmatchRow {
-    groups: Vec<String>,
-}
-
-impl RegexSubmatchRow {
-    pub fn has_groups(&self) -> bool {
-        !self.groups.is_empty()
-    }
-
-    pub fn pop_group(&mut self) -> TsonicResult<String> {
-        self.groups
-            .pop()
-            .ok_or_else(|| platform_error("regular expression submatch row is empty"))
-    }
-}
-
-pub fn find_regex_submatches(
-    pattern: &str,
-    input: &str,
-    limit: i32,
-) -> TsonicResult<RegexSubmatches> {
-    let expression = Regex::new(pattern)
-        .map_err(|error| platform_error(format!("invalid regular expression: {error}")))?;
-    let maximum = if limit < 0 {
-        usize::MAX
-    } else {
-        usize::try_from(limit)
-            .map_err(|_| platform_error("regular expression match limit is invalid"))?
-    };
-    let rows = expression
-        .captures_iter(input)
-        .take(maximum)
-        .map(|captures| {
-            (0..captures.len())
-                .map(|group_index| {
-                    captures
-                        .get(group_index)
-                        .map_or_else(String::new, |group| group.as_str().to_owned())
-                })
-                .collect()
-        })
-        .collect();
-    Ok(RegexSubmatches { rows })
-}
-
 pub fn decode_html(input: &str) -> String {
     html_escape::decode_html_entities(input).into_owned()
-}
-
-pub fn encode_url_component(input: &str) -> String {
-    const HEX: &[u8; 16] = b"0123456789ABCDEF";
-    let mut output = String::with_capacity(input.len());
-    for byte in input.as_bytes() {
-        if byte.is_ascii_alphanumeric()
-            || matches!(
-                byte,
-                b'-' | b'_' | b'.' | b'!' | b'~' | b'*' | b'\'' | b'(' | b')'
-            )
-        {
-            output.push(char::from(*byte));
-        } else {
-            output.push('%');
-            output.push(char::from(HEX[usize::from(byte >> 4)]));
-            output.push(char::from(HEX[usize::from(byte & 0x0f)]));
-        }
-    }
-    output
-}
-
-pub fn decode_url_component(input: &str) -> TsonicResult<String> {
-    let bytes = input.as_bytes();
-    let mut output = Vec::with_capacity(bytes.len());
-    let mut index = 0;
-    while index < bytes.len() {
-        if bytes[index] != b'%' {
-            output.push(bytes[index]);
-            index += 1;
-            continue;
-        }
-        if index + 2 >= bytes.len() {
-            return Err(platform_error(
-                "URL component contains an incomplete percent escape",
-            ));
-        }
-        let high = decode_hex_digit(bytes[index + 1])
-            .ok_or_else(|| platform_error("URL component contains an invalid percent escape"))?;
-        let low = decode_hex_digit(bytes[index + 2])
-            .ok_or_else(|| platform_error("URL component contains an invalid percent escape"))?;
-        output.push((high << 4) | low);
-        index += 3;
-    }
-    String::from_utf8(output)
-        .map_err(|_| platform_error("URL component contains invalid UTF-8 data"))
-}
-
-fn decode_hex_digit(value: u8) -> Option<u8> {
-    match value {
-        b'0'..=b'9' => Some(value - b'0'),
-        b'a'..=b'f' => Some(value - b'a' + 10),
-        b'A'..=b'F' => Some(value - b'A' + 10),
-        _ => None,
-    }
 }
 
 fn platform_error(message: impl Into<String>) -> TsonicError {
@@ -1297,7 +930,7 @@ mod tests {
     #[test]
     fn markdown_operations_are_indexed_and_rewritten_exactly() {
         MARKDOWN_PARSE_COUNT.with(|count| count.set(0));
-        let mut document =
+        let document =
             MarkdownDocument::new("# Hello World\n\n[Docs](guide.md) and ![Logo](logo.png)");
         assert_eq!(document.occurrence_count(), 3);
         let heading = document.occurrence(0).expect("heading occurrence");
@@ -1356,7 +989,7 @@ mod tests {
 
     #[test]
     fn nested_hook_html_observes_inner_replacements() {
-        let mut document = MarkdownDocument::new("# [Guide](guide.md)");
+        let document = MarkdownDocument::new("# [Guide](guide.md)");
         document
             .replace_html(1, "<strong>Guide</strong>")
             .expect("replace nested link");
@@ -1368,9 +1001,20 @@ mod tests {
 
     #[test]
     fn invalid_markdown_occurrence_fails_closed() {
-        let mut document = MarkdownDocument::new("plain text");
+        let document = MarkdownDocument::new("plain text");
         assert!(document.occurrence(-1).is_err());
         assert!(document.replace_url(0, "/missing/").is_err());
+    }
+
+    #[test]
+    fn markdown_document_clones_preserve_one_mutable_document_identity() {
+        let document = MarkdownDocument::new("[Guide](guide.md)");
+        let same_document = document.clone();
+        same_document
+            .replace_url(0, "/guide/")
+            .expect("replace link through cloned carrier");
+
+        assert!(document.render().contains("href=\"/guide/\""));
     }
 
     #[test]
@@ -1455,29 +1099,6 @@ mod tests {
         assert_eq!(builder.length(), 8);
         assert_eq!(builder.snapshot(), "alphaβ🙂");
 
-        assert_eq!(
-            replace_regex("([a-z]+)([0-9]+)", "$2-$1", "item42").expect("valid expression"),
-            "42-item",
-        );
-        assert!(replace_regex("(", "x", "input").is_err());
-        let mut matches = find_regex_submatches("([a-z]+)([0-9]+)", "item42", -1)
-            .expect("valid submatch expression");
-        assert!(matches.has_rows());
-        let mut row = matches.pop_row().expect("one submatch row");
-        assert_eq!(row.pop_group().expect("last capture"), "42");
-        assert_eq!(row.pop_group().expect("first capture"), "item");
-        assert_eq!(row.pop_group().expect("full match"), "item42");
-        assert!(!row.has_groups());
-        assert!(row.pop_group().is_err());
-        assert!(!matches.has_rows());
-        assert!(matches.pop_row().is_err());
         assert_eq!(decode_html("&lt;b&gt;&#x1F642;&lt;/b&gt;"), "<b>🙂</b>");
-        assert_eq!(encode_url_component("a b/🙂"), "a%20b%2F%F0%9F%99%82");
-        assert_eq!(
-            decode_url_component("a%20b%2F%F0%9F%99%82").expect("valid URL component"),
-            "a b/🙂",
-        );
-        assert!(decode_url_component("%ZZ").is_err());
-        assert!(decode_url_component("%F0%28%8C%28").is_err());
     }
 }

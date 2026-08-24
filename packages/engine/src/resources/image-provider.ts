@@ -124,6 +124,6 @@ export const resizeImageResource = (resource: Resource, specification: string): 
       outputHeight,
     );
   } finally {
-    rmSync(workDirectory, true);
+    rmSync(workDirectory, { recursive: true, force: true });
   }
 };

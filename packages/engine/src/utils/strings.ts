@@ -58,7 +58,7 @@ export const codePointAtText = (source: string, index: int32): string => {
 export const nextCodePointIndex = (source: string, index: int32): int32 => {
   const codePoint = source.codePointAt(index);
   if (codePoint === undefined) return source.length as int32;
-  return index + (codePoint > 0xffff ? 2 : 1);
+  return (index + (codePoint > 0xffff ? 2 : 1)) as int32;
 };
 
 export const codePointLength = (source: string): int32 => {
