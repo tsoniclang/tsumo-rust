@@ -1,3 +1,3 @@
-import { decode_url_component } from "@tsonic/rust/crates/tsumo_platform/index.js";
+export const encodeUrlComponent = (value: string): string => encodeURIComponent(value);
 
-export const decodeUrlComponent = (value: string): string => decode_url_component(value);
+export const decodeUrlComponent = (value: string): string => decodeURIComponent(value);

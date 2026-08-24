@@ -51,7 +51,7 @@ export const renderMarkdownWithHooks = (
   const document = createMarkdownDocument(markdown);
   if (!context.hasAnyHooks()) return document.render();
 
-  const count: int32 = document.occurrence_count();
+  const count: int32 = document.occurrenceCount();
   for (let index: int32 = count - 1; index >= 0; index--) {
     const occurrence = document.occurrence(index);
     if (occurrence.kind === "image") {
@@ -59,13 +59,13 @@ export const renderMarkdownWithHooks = (
       if (template === undefined) continue;
       const value = new ImageHookValue(new ImageHookContext(
         occurrence.destination,
-        occurrence.plain_text,
+        occurrence.plainText,
         occurrence.title,
-        occurrence.plain_text,
+        occurrence.plainText,
         context.page,
         context.page,
       ));
-      document.replace_html(index, renderHookTemplate(template, value, context));
+      document.replaceHtml(index, renderHookTemplate(template, value, context));
       continue;
     }
     if (occurrence.kind === "link") {
@@ -73,13 +73,13 @@ export const renderMarkdownWithHooks = (
       if (template === undefined) continue;
       const value = new LinkHookValue(new LinkHookContext(
         occurrence.destination,
-        document.occurrence_html(index),
+        document.occurrenceHtml(index),
         occurrence.title,
-        occurrence.plain_text,
+        occurrence.plainText,
         context.page,
         context.page,
       ));
-      document.replace_html(index, renderHookTemplate(template, value, context));
+      document.replaceHtml(index, renderHookTemplate(template, value, context));
       continue;
     }
     if (occurrence.kind === "heading") {
@@ -87,13 +87,13 @@ export const renderMarkdownWithHooks = (
       if (template === undefined) continue;
       const value = new HeadingHookValue(new HeadingHookContext(
         occurrence.level,
-        document.occurrence_html(index),
-        occurrence.plain_text,
+        document.occurrenceHtml(index),
+        occurrence.plainText,
         occurrence.anchor,
         context.page,
         context.page,
       ));
-      document.replace_html(index, renderHookTemplate(template, value, context));
+      document.replaceHtml(index, renderHookTemplate(template, value, context));
     }
   }
   return document.render();

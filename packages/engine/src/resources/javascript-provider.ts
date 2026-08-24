@@ -1,8 +1,12 @@
 import { Buffer } from "node:buffer";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { env } from "node:process";
-import { JavaScriptCompiler } from "@tsonic/rust/crates/tsumo_platform/index.js";
 import { createTsumoError } from "../diagnostics.js";
+import { fileExists, readTextFile } from "../fs.js";
 import { Resource } from "./models.js";
+import { runExternalProcess } from "./external-process.js";
 import { splitResourceFileName, splitResourcePath } from "./paths.js";
 import { readResourceText } from "./text.js";
 
@@ -75,32 +79,63 @@ export const buildJavaScriptResource = (
   }
 
   const configuredExecutable = env["TSUMO_ESBUILD"];
-  const executable = configuredExecutable !== undefined && configuredExecutable !== null && configuredExecutable.trim() !== ""
+  const executable = configuredExecutable !== undefined && configuredExecutable.trim() !== ""
     ? configuredExecutable.trim()
     : "esbuild";
-  const compiler = new JavaScriptCompiler(
-    sourceText,
-    executable,
-    resource.sourcePath ?? "",
-    sourceExtension(resource),
-  );
-  compiler.set_minify(options.minify);
-  compiler.set_format(options.format);
-  compiler.set_target(options.target);
-  compiler.set_platform(options.platform);
-  const paramsJson = options.paramsJson;
-  if (paramsJson !== undefined) compiler.set_params_json(paramsJson);
-  const jsxFactory = options.jsxFactory;
-  if (jsxFactory !== undefined) compiler.set_jsx_factory(jsxFactory);
-  const text = compiler.compile();
-  return new Resource(
-    `${resource.id}|js-build:${options.cacheKey()}`,
-    resource.sourcePath,
-    true,
-    outputRelativePath(resource, options),
-    Buffer.from(text, "utf8"),
-    text,
-    resource.Data,
-    "application/javascript",
-  );
+  const workDirectory = mkdtempSync(join(tmpdir(), "tsumo-esbuild-"));
+
+  try {
+    let inputPath = join(workDirectory, "input" + sourceExtension(resource));
+    const sourcePath = resource.sourcePath;
+    if (sourcePath !== undefined && fileExists(sourcePath) && readTextFile(sourcePath) === sourceText) {
+      inputPath = sourcePath;
+    } else {
+      writeFileSync(inputPath, sourceText, "utf8");
+    }
+    const outputPath = join(workDirectory, "output.js");
+    const argumentsList: string[] = [
+      inputPath,
+      "--bundle",
+      `--outfile=${outputPath}`,
+      `--format=${options.format}`,
+      `--target=${options.target}`,
+      `--platform=${options.platform}`,
+      "--charset=utf8",
+      "--log-level=warning",
+    ];
+    if (options.minify) argumentsList.push("--minify");
+    const jsxFactory = options.jsxFactory;
+    if (jsxFactory !== undefined) argumentsList.push(`--jsx-factory=${jsxFactory}`);
+    const paramsJson = options.paramsJson;
+    if (paramsJson !== undefined) {
+      const paramsPath = join(workDirectory, "params.json");
+      writeFileSync(paramsPath, paramsJson, "utf8");
+      argumentsList.push(`--alias:@params=${paramsPath}`);
+    }
+
+    const process = runExternalProcess(executable, argumentsList, "esbuild", "TSUMO_ESBUILD_START_FAILED");
+    if (process.exitCode !== 0) {
+      throw createTsumoError(
+        "TSUMO_ESBUILD_FAILED",
+        process.standardError === "" ? `esbuild failed with exit code ${process.exitCode}` : process.standardError,
+      );
+    }
+    if (!existsSync(outputPath)) {
+      throw createTsumoError("TSUMO_ESBUILD_OUTPUT_MISSING", "esbuild completed without producing JavaScript");
+    }
+
+    const text = readFileSync(outputPath, "utf8");
+    return new Resource(
+      `${resource.id}|js-build:${options.cacheKey()}`,
+      resource.sourcePath,
+      true,
+      outputRelativePath(resource, options),
+      Buffer.from(text, "utf8"),
+      text,
+      resource.Data,
+      "application/javascript",
+    );
+  } finally {
+    rmSync(workDirectory, { recursive: true, force: true });
+  }
 };

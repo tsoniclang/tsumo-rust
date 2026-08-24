@@ -323,6 +323,9 @@ export class TemplateRuntimeTests {
 
   template_regular_expression_functions_preserve_matches_groups_and_limits(): void {
     Assert.StringEqual("ab,ac", render("{{ delimit (findRE `a.` `ab ac ad` 2) `,` }}"));
+    Assert.StringEqual("ab,ac,ad", render("{{ delimit (findRE `a.` `ab ac ad`) `,` }}"));
+    Assert.StringEqual("", render("{{ delimit (findRE `a.` `ab ac ad` 0) `,` }}"));
+    Assert.StringEqual(",,", render("{{ delimit (findRE `(?:)` `ab`) `,` }}"));
     Assert.StringEqual(
       "item42|item|42|item|42",
       render(
@@ -330,7 +333,22 @@ export class TemplateRuntimeTests {
         "{{ delimit . `|` }}|{{ index . 1 }}|{{ index . 2 }}{{ end }}",
       ),
     );
+    Assert.StringEqual(
+      "b|",
+      render("{{ range findRESubmatch `(a)?b` `b` }}{{ delimit . `|` }}{{ end }}"),
+    );
     Assert.StringEqual("x2 item3", render("{{ replaceRE `item` `x` `item2 item3` 1 }}"));
+    Assert.StringEqual("x2 x3", render("{{ replaceRE `item` `x` `item2 item3` }}"));
+    Assert.StringEqual("item2 item3", render("{{ replaceRE `item` `x` `item2 item3` 0 }}"));
+    Assert.StringEqual("&lt;&gt;a2", render("{{ replaceRE `(a)?b` `<$1>` `b` 1 }}{{ replaceRE `(a)` `$12` `a` 1 }}"));
+    Assert.StringEqual("a|$00", render("{{ replaceRE `(a)` `$01` `a` 1 }}|{{ replaceRE `(a)` `$00` `a` 1 }}"));
+    Assert.StringEqual(
+      "item-42-$-item42",
+      render("{{ replaceRE `(?<word>[a-z]+)([0-9]+)` `$<word>-$2-$$-$&` `item42` 1 }}"),
+    );
+    Assert.StringEqual("TSUMO_TEMPLATE_REGEXP_INVALID", captureDiagnosticCode(() => {
+      render("{{ findRE `(` `value` }}");
+    }));
   }
 
   template_scanning_preserves_unicode_scalars_and_utf16_locations(): void {

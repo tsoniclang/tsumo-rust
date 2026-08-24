@@ -1,7 +1,6 @@
 import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
 import type { int32 } from "@tsonic/core/types.js";
-import { encode_url_component } from "@tsonic/rust/crates/tsumo_platform/index.js";
 import {
   findRegularExpressionMatches,
   findRegularExpressionSubmatches,
@@ -23,6 +22,7 @@ import {
 import { ensureTrailingSlash, humanizeSlug, slugify } from "../../utils/text.js";
 import { TextBuilder } from "../../utils/text-builder.js";
 import { parseInt32 } from "../../utils/int32.js";
+import { encodeUrlComponent } from "../../utils/url-components.js";
 import { renderMarkdown } from "../../markdown.js";
 import {
   AnyArrayValue, BoolValue, DateValue, DictValue, DocsMountArrayValue, HtmlValue,
@@ -401,12 +401,12 @@ export const callScalarFunction = (
   if (name === "urlquery" && args.length >= 1) {
     const v = args[0]!;
     const s = toPlainString(v);
-    return new StringValue(encode_url_component(s));
+    return new StringValue(encodeUrlComponent(s));
   }
 
   if (name === "querify" && args.length >= 2) {
     return new StringValue(
-      encode_url_component(toPlainString(args[0]!)) + "=" + encode_url_component(toPlainString(args[1]!)),
+      encodeUrlComponent(toPlainString(args[0]!)) + "=" + encodeUrlComponent(toPlainString(args[1]!)),
     );
   }
 

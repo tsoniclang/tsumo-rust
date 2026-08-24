@@ -171,24 +171,24 @@ const maybeRewriteUrl = (urlValue: string, ctx: DocsLinkRewriteContext): string 
 
 const createDocumentWithRewrites = (markdown: string, ctx: DocsLinkRewriteContext) => {
   const document = createMarkdownDocument(markdown);
-  const count: int32 = document.occurrence_count();
+  const count: int32 = document.occurrenceCount();
   for (let index: int32 = 0; index < count; index++) {
     const occurrence = document.occurrence(index);
     if (occurrence.kind !== "link" && occurrence.kind !== "image") continue;
     const updated = maybeRewriteUrl(occurrence.destination, ctx);
-    if (updated !== undefined) document.replace_url(index, updated);
+    if (updated !== undefined) document.replaceUrl(index, updated);
   }
   return document;
 };
 
 export const renderDocsMarkdown = (markdownRaw: string, ctx: DocsLinkRewriteContext): MarkdownResult => {
   const sourcePlan = createMarkdownSourcePlan(markdownRaw);
-  const document = createDocumentWithRewrites(sourcePlan.full_source, ctx);
+  const document = createDocumentWithRewrites(sourcePlan.fullSource, ctx);
   const html = document.render();
-  const summaryHtml = sourcePlan.summary_source === ""
+  const summaryHtml = sourcePlan.summarySource === ""
     ? ""
-    : sourcePlan.summary_source === sourcePlan.full_source
+    : sourcePlan.summarySource === sourcePlan.fullSource
       ? html.trim()
-      : createDocumentWithRewrites(sourcePlan.summary_source, ctx).render().trim();
-  return new MarkdownResult(html, summaryHtml, document.plain_text(), "");
+      : createDocumentWithRewrites(sourcePlan.summarySource, ctx).render().trim();
+  return new MarkdownResult(html, summaryHtml, document.plainText(), "");
 };

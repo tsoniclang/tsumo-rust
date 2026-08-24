@@ -20,10 +20,10 @@ const stripLeadingZero = (value: string): string => {
   return value.startsWith("0") ? value.slice(1) : value;
 };
 
-const weekdayIndex = (milliseconds: number): number => {
+const weekdayIndex = (milliseconds: number): int32 => {
   let value = (Math.floor(milliseconds / 86400000) + 4) % 7;
   if (value < 0) value += 7;
-  return value;
+  return value as int32;
 };
 
 export const addCalendarDate = (

@@ -2,6 +2,7 @@ import type { int32 } from "@tsonic/core/types.js";
 import { TemplateValue } from "./base.js";
 import { compareText, substringCount, substringFrom } from "../../utils/strings.js";
 import { parseInt32 } from "../../utils/int32.js";
+import { createTsumoError } from "../../diagnostics.js";
 
 /**
  * Represents a version string with semver comparison semantics.
@@ -66,6 +67,13 @@ export class VersionStringValue extends TemplateValue {
       }
     }
     if (numStr === "") return 0;
-    return parseInt32(numStr) ?? 0;
+    const value = parseInt32(numStr);
+    if (value === undefined) {
+      throw createTsumoError(
+        "TSUMO_TEMPLATE_VERSION_COMPONENT_OUT_OF_RANGE",
+        `Version component '${numStr}' is outside the supported int32 range`,
+      );
+    }
+    return value;
   }
 }

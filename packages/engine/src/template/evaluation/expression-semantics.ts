@@ -29,7 +29,6 @@ import {
 import { callPageCollectionMethod, getPageTerms, pageHasShortcode, toPages } from "./page-semantics.js";
 import { globMatch, resolvePageRef, tryGetPage } from "./path-semantics.js";
 import { resolvePath } from "./property-semantics.js";
-import { isNumberLiteral } from "./scalar-semantics.js";
 import { trimEndCharacter } from "./serialization.js";
 import { getUrlQueryValue } from "./url-query-semantics.js";
 import { templateValueDiagnosticKind } from "./value-diagnostics.js";
@@ -90,7 +89,8 @@ export const evalToken = (token: string, scope: RenderScope): TemplateValue => {
   if (t === "true") return new BoolValue(true);
   if (t === "false") return new BoolValue(false);
   if (t === "nil") return nil;
-  if (isNumberLiteral(t)) return new NumberValue(parseInt32(t)!);
+  const number = parseInt32(t);
+  if (number !== undefined) return new NumberValue(number);
   return new StringValue(t);
 };
 

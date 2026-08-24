@@ -39,7 +39,7 @@ export const fileExists = (path: string): boolean => {
 };
 
 export const ensureDir = (path: string): void => {
-  mkdirSync(path, true);
+  mkdirSync(path, { recursive: true });
 };
 
 export const readTextFile = (path: string): string => {
@@ -55,14 +55,14 @@ export const readBinaryFile = (path: string): Buffer => {
 export const writeTextFile = (path: string, content: string): void => {
   const dir = dirname(path);
   if (dir !== "") {
-    mkdirSync(dir, true);
+    mkdirSync(dir, { recursive: true });
   }
   writeFileSync(path, content, "utf-8");
 };
 
 export const deleteDirRecursive = (path: string): void => {
   if (!dirExists(path)) return;
-  rmSync(path, true);
+  rmSync(path, { recursive: true, force: true });
 };
 
 export const rejectFilesystemLink = (path: string): void => {

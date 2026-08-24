@@ -128,28 +128,28 @@ export const renderMarkdownWithShortcodes = (
   const markdownSource = protectedStandard.source;
 
   const sourcePlan = createMarkdownSourcePlan(markdownSource);
-  const fullDocument = createMarkdownDocument(sourcePlan.full_source);
-  const toc = sourcePlan.full_source === sourcePlan.toc_source
-    ? fullDocument.table_of_contents()
-    : createMarkdownDocument(sourcePlan.toc_source).table_of_contents();
+  const fullDocument = createMarkdownDocument(sourcePlan.fullSource);
+  const toc = sourcePlan.fullSource === sourcePlan.tableOfContentsSource
+    ? fullDocument.tableOfContents()
+    : createMarkdownDocument(sourcePlan.tableOfContentsSource).tableOfContents();
 
   // Step 3: Create render hook context
   const hookCtx = new RenderHookContext(page, site, env);
 
   const hasHooks = hookCtx.hasAnyHooks();
   let html = hasHooks
-    ? renderMarkdownWithHooks(sourcePlan.full_source, hookCtx)
+    ? renderMarkdownWithHooks(sourcePlan.fullSource, hookCtx)
     : fullDocument.render();
-  const plainText = fullDocument.plain_text();
+  const plainText = fullDocument.plainText();
   let summaryHtml: string;
-  if (sourcePlan.summary_source === "") {
+  if (sourcePlan.summarySource === "") {
     summaryHtml = "";
-  } else if (sourcePlan.summary_source === sourcePlan.full_source) {
+  } else if (sourcePlan.summarySource === sourcePlan.fullSource) {
     summaryHtml = html.trim();
   } else if (hasHooks) {
-    summaryHtml = renderMarkdownWithHooks(sourcePlan.summary_source, hookCtx).trim();
+    summaryHtml = renderMarkdownWithHooks(sourcePlan.summarySource, hookCtx).trim();
   } else {
-    summaryHtml = createMarkdownDocument(sourcePlan.summary_source).render().trim();
+    summaryHtml = createMarkdownDocument(sourcePlan.summarySource).render().trim();
   }
 
   // Step 5: Restore standard-notation shortcode output without Markdown processing.
