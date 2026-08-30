@@ -10,6 +10,10 @@ mkdir -p "$ROOT/.temp/verification-runs"
 VERIFY_ROOT="$(mktemp -d "$ROOT/.temp/verification-runs/run-XXXXXXXX")"
 echo "Verification artifacts: $VERIFY_ROOT"
 
+echo "=== locked dependency graph ==="
+git diff --exit-code -- Cargo.lock
+cargo metadata --locked --format-version 1 >"$VERIFY_ROOT/cargo-metadata.json"
+
 generated_manifest() {
   find \
     packages/engine/out/rust \
@@ -73,5 +77,8 @@ diff \
   <(cd "$RELEASE_OUT" && find . -type f -print0 | sort -z | xargs -0 sha256sum) \
   | tee "$VERIFY_ROOT/release-output-diff.log"
 test "$(find "$RELEASE_OUT" -type f | wc -l)" -eq 21
+
+echo "=== tracked lockfile immutability ==="
+git diff --exit-code -- Cargo.lock
 
 echo "ALL VERIFICATIONS PASSED"
