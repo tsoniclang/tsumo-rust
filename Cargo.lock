@@ -1855,6 +1855,7 @@ dependencies = [
  "num-traits",
  "regress",
  "ryu-js",
+ "tinyvec",
  "tsonic_rust_runtime",
  "unicode-normalization",
 ]
