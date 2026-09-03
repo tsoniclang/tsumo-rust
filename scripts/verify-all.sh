@@ -41,8 +41,8 @@ generated_manifest >"$VERIFY_ROOT/generated-pass-2.sha256"
 diff -u "$VERIFY_ROOT/generated-pass-1.sha256" "$VERIFY_ROOT/generated-pass-2.sha256" \
   | tee "$VERIFY_ROOT/generated-determinism.diff"
 
-echo "=== authored Rust formatting ==="
-cargo fmt --package tsumo-platform --check 2>&1 | tee "$VERIFY_ROOT/cargo-fmt.log"
+echo "=== complete Rust workspace formatting ==="
+cargo fmt --all -- --check 2>&1 | tee "$VERIFY_ROOT/cargo-fmt.log"
 
 echo "=== Rust workspace build ==="
 TSUMO_RUST_LOG_DIR="$VERIFY_ROOT/rust" bash scripts/build-rust.sh
