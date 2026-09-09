@@ -125,14 +125,37 @@ test("portable external-tool orchestration uses the Node capability", () => {
     );
   }
 
-  const platform = readFileSync(
-    join(repoRoot, "crates/tsumo_platform/src/lib.rs"),
-    "utf8",
+  assert.equal(repositoryFiles.includes("crates/tsumo_platform/src/lib.rs"), true);
+  assert.deepEqual(
+    nativeProcessViolations(repositoryFiles, (path) => readFileSync(join(repoRoot, path), "utf8")),
+    [],
   );
-  assert.doesNotMatch(
-    platform,
-    /\b(?:SassCompiler|JavaScriptCompiler)\b|\bstd::process\b|\btempfile::/u,
-  );
+});
+
+test("native process boundaries inspect every Rust module, including nested additions", () => {
+  for (const path of [
+    "crates/tsumo_platform/src/lib.rs",
+    "crates/tsumo_platform/src/text.rs",
+    "crates/tsumo_platform/src/markdown/nested/probe.rs",
+    "crates/tsumo_platform/tests/nested/probe.rs",
+  ]) {
+    for (const source of [
+      "struct SassCompiler;",
+      "struct JavaScriptCompiler;",
+      "use std::process::Command;",
+      "tempfile::tempdir();",
+    ]) {
+      const sources = new Map([
+        ["crates/tsumo_platform/src/lib.rs", ""],
+        [path, source],
+      ]);
+      assert.deepEqual(
+        nativeProcessViolations([...sources.keys()], (sourcePath) => sources.get(sourcePath)),
+        [path],
+        `${path}: ${source}`,
+      );
+    }
+  }
 });
 
 test("regular expression helpers use only the shared JavaScript contract", () => {
@@ -256,6 +279,15 @@ test("generated and investigation artifacts remain untracked and ignored", () =>
     assert.equal(ignored, path);
   }
 });
+
+function nativeProcessViolations(paths, readSource) {
+  return paths.filter((path) => /^crates\/tsumo_platform\/.*\.rs$/u.test(path))
+    .flatMap((path) =>
+      /\b(?:SassCompiler|JavaScriptCompiler)\b|\bstd::process\b|\btempfile::/u.test(readSource(path))
+        ? [path]
+        : []
+    );
+}
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, "utf8"));

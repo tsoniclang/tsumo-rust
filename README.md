@@ -16,17 +16,24 @@ Rust source; no JavaScript engine or .NET runtime is embedded.
 | CLI | ✅ | `build`, `server`, `new site`, `new`, `help`, and `version` |
 | Docs mode | ✅ | Multi-repository mounts, navigation, link rewriting, and search index |
 
-Markdown and image operations cross one explicit target-owned boundary in
-`crates/tsumo_platform`; the TypeScript engine remains shared application code.
+Text storage, Markdown, image, and HTML operations cross one explicit native
+boundary in `crates/tsumo_platform`; the TypeScript engine remains shared
+application code.
 
 ## Repository layout
 
 - `packages/engine` — Tsonic-authored site engine, emitted as the `tsumo_engine` Rust crate.
 - `packages/cli` — Tsonic-authored native `tsumo` binary.
 - `packages/tests` — 40 Tsonic-authored tests compiled into `tsumo-tests`.
-- `crates/tsumo_platform` — closed Rust implementations for target-native Markdown, image, Sass, and HTML operations.
+- `crates/tsumo_platform` — canonical crate-root exports over private text, Markdown, image, and HTML adapters.
 - `test` — Node-driven end-to-end tests against the compiled Rust binary.
 - `examples/basic-blog` and `examples/docs-site` — executable fixture sites.
+
+The native crate's `src/lib.rs` preserves the public exports used through
+`@tsonic/rust/crates/tsumo_platform/index.js`. Implementations live in `src/text.rs`,
+`src/images.rs`, `src/html.rs`, and `src/markdown/{document,render,batch}.rs`, with
+private Markdown composition in `src/markdown/mod.rs`. Sass and JavaScript tool
+processes remain in the TypeScript engine's Node-capability adapters.
 
 ## Prerequisites
 
