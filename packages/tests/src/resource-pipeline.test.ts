@@ -2,7 +2,6 @@ import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { runExternalProcess } from "../../engine/src/resources/external-process.js";
 
 import {
   createStringResource,
@@ -15,6 +14,7 @@ import {
   ResourceData,
   resourceGlobMatches,
   ResourceManager,
+  runExternalProcess,
   TsumoError,
 } from "@tsumo/engine/testing.js";
 import {
