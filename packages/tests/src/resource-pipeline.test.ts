@@ -14,6 +14,7 @@ import {
   ResourceData,
   resourceGlobMatches,
   ResourceManager,
+  runExternalProcess,
   TsumoError,
 } from "@tsumo/engine/testing.js";
 import {
@@ -36,6 +37,12 @@ const captureResourceDiagnostic = (operation: () => void): string => {
 };
 
 export class ResourcePipelineTests {
+  missing_external_tool_preserves_the_requested_diagnostic(): void {
+    Assert.StringEqual("TSUMO_TEST_TOOL_START_FAILED", captureResourceDiagnostic(() => {
+      runExternalProcess("__tsumo_missing_external_tool__", [], "test tool", "TSUMO_TEST_TOOL_START_FAILED");
+    }));
+  }
+
   relative_path_policy_rejects_every_escape_form(): void {
     Assert.StringEqual(
       "TSUMO_RESOURCE_PATH_ESCAPES_ROOT",
@@ -191,6 +198,9 @@ export class ResourcePipelineTests {
 
 export const runResourcePipelineTests = (): void => {
   const tests = new ResourcePipelineTests();
+  runTest("missing external tool preserves the requested diagnostic", () => {
+    tests.missing_external_tool_preserves_the_requested_diagnostic();
+  });
   runTest("relative path policy rejects every escape form", () => {
     tests.relative_path_policy_rejects_every_escape_form();
   });
