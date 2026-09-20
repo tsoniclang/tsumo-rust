@@ -1,6 +1,6 @@
 import type { int32 } from "@tsonic/core/types.js";
 import { TemplateValue } from "./base.js";
-import { compareText, substringCount, substringFrom } from "../../utils/strings.js";
+import { compareText, substringFrom } from "../../utils/strings.js";
 import { parseInt32 } from "../../utils/int32.js";
 import { createTsumoError } from "../../diagnostics.js";
 
@@ -57,8 +57,7 @@ export class VersionStringValue extends TemplateValue {
 
   static extractLeadingNumber(s: string): int32 {
     let numStr = "";
-    for (let i = 0; i < s.length; i++) {
-      const ch = substringCount(s, i, 1);
+    for (const ch of s) {
       // Check if ch is a digit (0-9) using compareTo for C# compatibility
       if (compareText(ch, "0") >= 0 && compareText(ch, "9") <= 0) {
         numStr = numStr + ch;

@@ -10,7 +10,8 @@ export class IndexedSourceText {
     this.utf16Offsets = [0];
     let utf16Offset: int32 = 0;
     for (let index: int32 = 0; index < this.characters.length; index++) {
-      utf16Offset += this.characters[index]!.length as int32;
+      const codePoint = this.characters[index]!.codePointAt(0)!;
+      utf16Offset += codePoint > 0xffff ? 2 : 1;
       this.utf16Offsets.push(utf16Offset);
     }
     this.length = this.characters.length as int32;

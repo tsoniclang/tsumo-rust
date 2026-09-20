@@ -1,5 +1,5 @@
 import { parseInt32, toInt32 } from "../../utils/int32.js";
-import { substringCount, zeroPadInteger } from "../../utils/strings.js";
+import { codePointAtText, nextCodePointIndex, substringCount, zeroPadInteger } from "../../utils/strings.js";
 import { TextBuilder } from "../../utils/text-builder.js";
 import type { int32 } from "@tsonic/core/types.js";
 
@@ -100,7 +100,7 @@ export const formatDateTime = (value: string, layout: string): string | undefine
   const weekday = weekdayIndex(milliseconds);
   const output = new TextBuilder();
 
-  let index = 0;
+  let index: int32 = 0;
   while (index < layout.length) {
     const remaining = layout.slice(index);
     if (remaining.startsWith("Monday")) {
@@ -155,8 +155,8 @@ export const formatDateTime = (value: string, layout: string): string | undefine
       output.append(`${hour12Value}`);
       index += 1;
     } else {
-      output.append(substringCount(layout, index, 1));
-      index += 1;
+      output.append(codePointAtText(layout, index));
+      index = nextCodePointIndex(layout, index);
     }
   }
 

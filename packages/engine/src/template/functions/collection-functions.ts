@@ -579,7 +579,7 @@ export const callCollectionFunction = (
     const delim = toPlainString(args[1]!);
     const items: TemplateValue[] = [];
     if (delim === "") {
-      for (let i = 0; i < s.length; i++) items.push(new StringValue(substringCount(s, i, 1)));
+      for (const character of s) items.push(new StringValue(character));
       return new AnyArrayValue(items);
     }
 

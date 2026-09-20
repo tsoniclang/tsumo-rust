@@ -24,7 +24,7 @@ export class DocsOutputClaims {
 
 export const resolveDocsOutputPath = (outputRoot: string, relativePath: string): string => {
   const normalized = relativePath.replaceAll("\\", "/");
-  if (normalized.startsWith("/") || (normalized.length >= 2 && normalized[1] === ":")) {
+  if (normalized.startsWith("/") || normalized.codePointAt(1) === 58) {
     throw createTsumoError("TSUMO_DOCS_OUTPUT_PATH_ABSOLUTE", `Docs output path must be relative: ${relativePath}`);
   }
   const root = resolve(outputRoot);

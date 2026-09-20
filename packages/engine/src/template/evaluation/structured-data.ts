@@ -14,7 +14,7 @@ import {
 } from "../../utils/json.js";
 import { parseStructuredScalar, stripStructuredComment } from "../../utils/structured-scalars.js";
 import { parseInt32 } from "../../utils/int32.js";
-import { substringFrom } from "../../utils/strings.js";
+import { nextCodePointIndex, substringFrom } from "../../utils/strings.js";
 import { readResourceText } from "../../resources/text.js";
 import {
   AnyArrayValue,
@@ -88,7 +88,7 @@ const yamlSourceIndentation = (raw: string, sourcePath: string | undefined, line
 const yamlMappingSeparator = (value: string): int32 => {
   let quote = "";
   let escaped = false;
-  for (let index: int32 = 0; index < value.length; index++) {
+  for (let index: int32 = 0; index < value.length; index = nextCodePointIndex(value, index)) {
     const character = value[index]!;
     if (escaped) {
       escaped = false;
@@ -124,7 +124,7 @@ const yamlQuotedScalarStart = (content: string): int32 | undefined => {
 };
 
 const scanYamlQuotedScalar = (content: string, quoteStart: int32, quote: string): YamlQuoteScan => {
-  for (let index: int32 = quoteStart + 1; index < content.length; index++) {
+  for (let index: int32 = quoteStart + 1; index < content.length; index = nextCodePointIndex(content, index)) {
     const character = content[index]!;
     if (quote === "\"" && character === "\\") {
       if (index + 1 >= content.length) return new YamlQuoteScan(false, true);

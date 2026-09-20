@@ -3,7 +3,7 @@ import { replaceText, substringCount } from "../utils/strings.js";
 
 export const normalizeTemplateRelativePath = (rawPath: string): string => {
   const normalized = replaceText(rawPath.trim(), "\\", "/");
-  const driveQualified = normalized.length >= 2 && substringCount(normalized, 1, 1) === ":";
+  const driveQualified = normalized.codePointAt(1) === 58;
   if (normalized.startsWith("/") || driveQualified) {
     throw createTsumoError(
       "TSUMO_TEMPLATE_PATH_ABSOLUTE",

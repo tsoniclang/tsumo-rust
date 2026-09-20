@@ -3,6 +3,7 @@ import { runDocsDomainTests } from "./docs-domain.test.js";
 import { runFilesystemBoundaryTests } from "./filesystem-boundaries.test.js";
 import { runInputBoundaryTests } from "./input-boundaries.test.js";
 import { runLayoutCacheTests } from "./layout-cache.test.js";
+import { runNativeTextTests } from "./native-text.test.js";
 import { runOutputPlanTests } from "./output-plan.test.js";
 import { runResourcePipelineTests } from "./resource-pipeline.test.js";
 import { runScaffoldAndBuildTests } from "./scaffold-and-build.test.js";
@@ -27,6 +28,7 @@ export function main(): void {
   runTemplatePageContextTests();
   runTemplateRuntimeTests();
   runThemeCompatibilityTests();
-  completeTests(74);
+  runNativeTextTests();
+  completeTests(83);
   return;
 }
