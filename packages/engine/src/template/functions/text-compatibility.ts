@@ -31,8 +31,7 @@ const isAsciiWhitespace = (character: string): boolean =>
 export const anchorizeText = (input: string): string => {
   const lower = input.toLowerCase();
   const result: string[] = [];
-  for (let index = 0; index < lower.length; index++) {
-    const character = lower[index]!;
+  for (const character of lower) {
     if (isAsciiWhitespace(character)) {
       result.push("-");
       continue;

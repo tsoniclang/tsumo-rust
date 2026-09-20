@@ -1,5 +1,6 @@
 import type { int32 } from "@tsonic/core/types.js";
 import { createTsumoError } from "../diagnostics.js";
+import { nextCodePointIndex } from "./strings.js";
 
 export const findRegularExpressionMatches = (
   pattern: string,
@@ -86,7 +87,7 @@ const expandRegularExpressionReplacement = (
   matchIndex: int32,
 ): string => {
   const result: string[] = [];
-  for (let index = 0; index < replacement.length; index++) {
+  for (let index: int32 = 0; index < replacement.length; index = nextCodePointIndex(replacement, index)) {
     const current = replacement.charAt(index);
     if (current !== "$" || index + 1 >= replacement.length) {
       result.push(current);

@@ -28,7 +28,7 @@ export const normalizeResourceSlashes = (path: string): string => path.replaceAl
 export const normalizeResourceRelativePath = (path: string): string => {
   let normalized = normalizeResourceSlashes(path.trim());
   while (normalized.startsWith("/")) normalized = substringFrom(normalized, 1);
-  const driveQualified = normalized.length >= 2 && substringCount(normalized, 1, 1) === ":";
+  const driveQualified = normalized.codePointAt(1) === 58;
   if (isAbsolute(normalized) || driveQualified) {
     throw createTsumoError("TSUMO_RESOURCE_PATH_ABSOLUTE", `Resource path must be source-root relative: ${path}`);
   }

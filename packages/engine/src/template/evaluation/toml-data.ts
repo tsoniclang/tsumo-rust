@@ -2,6 +2,7 @@ import type { int32 } from "@tsonic/core/types.js";
 import { createTsumoError, TsumoError } from "../../diagnostics.js";
 import { ParamKind, ParamValue } from "../../params.js";
 import { parseStructuredScalar, stripStructuredComment } from "../../utils/structured-scalars.js";
+import { nextCodePointIndex } from "../../utils/strings.js";
 import {
   AnyArrayValue,
   BoolValue,
@@ -35,7 +36,7 @@ const statementIsComplete = (text: string): boolean => {
   let objectDepth: int32 = 0;
   let quote = "";
   let escaped = false;
-  for (let index: int32 = 0; index < text.length; index++) {
+  for (let index: int32 = 0; index < text.length; index = nextCodePointIndex(text, index)) {
     const character = text[index]!;
     if (escaped) {
       escaped = false;
@@ -96,7 +97,7 @@ const splitTomlKey = (
   let start: int32 = 0;
   let quote = "";
   let escaped = false;
-  for (let index: int32 = 0; index <= text.length; index++) {
+  for (let index: int32 = 0; index <= text.length; index = index === text.length ? index + 1 : nextCodePointIndex(text, index)) {
     const character = index < text.length ? text[index]! : ".";
     if (escaped) {
       escaped = false;
@@ -139,7 +140,7 @@ const assignmentSeparator = (
   let objectDepth: int32 = 0;
   let quote = "";
   let escaped = false;
-  for (let index: int32 = 0; index < text.length; index++) {
+  for (let index: int32 = 0; index < text.length; index = nextCodePointIndex(text, index)) {
     const character = text[index]!;
     if (escaped) {
       escaped = false;
@@ -311,7 +312,7 @@ class TomlValueReader {
         const character = this.peek();
         if (escaped) {
           escaped = false;
-          this.index++;
+          this.index = nextCodePointIndex(this.text, this.index);
           continue;
         }
         if (quote === "\"" && character === "\\") {
@@ -326,7 +327,7 @@ class TomlValueReader {
           continue;
         }
         if (character === "=" && quote === "") break;
-        this.index++;
+        this.index = nextCodePointIndex(this.text, this.index);
       }
       if (this.peek() !== "=") throw this.error("TOML inline table entry requires '='");
       const key = splitTomlKey(this.text.slice(keyStart, this.index).trim(), this.sourcePath, this.line);
@@ -350,7 +351,7 @@ class TomlValueReader {
     while (this.index < this.text.length) {
       const character = this.peek();
       if (character === "," || character === "]" || character === "}" || /\s/.test(character)) break;
-      this.index++;
+      this.index = nextCodePointIndex(this.text, this.index);
     }
     const raw = this.text.slice(start, this.index).trim();
     if (raw === "") throw this.error("TOML value cannot be empty");
@@ -372,7 +373,7 @@ class TomlValueReader {
   }
 
   skipWhitespace(): void {
-    while (this.index < this.text.length && /\s/.test(this.text[this.index]!)) this.index++;
+    while (this.index < this.text.length && /\s/.test(this.text[this.index]!)) this.index = nextCodePointIndex(this.text, this.index);
   }
 
   peek(): string {
@@ -381,7 +382,9 @@ class TomlValueReader {
 
   next(): string {
     if (this.index >= this.text.length) throw this.error("Unexpected end of TOML value");
-    return this.text[this.index++]!;
+    const character = this.text[this.index]!;
+    this.index = nextCodePointIndex(this.text, this.index);
+    return character;
   }
 
   expect(character: string): void {

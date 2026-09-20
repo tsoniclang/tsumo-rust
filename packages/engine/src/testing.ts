@@ -42,6 +42,7 @@ export { TemplateEnvironment } from "./template/environment.js";
 export { getEmbeddedTemplateSource } from "./template/embedded-templates.js";
 export { TemplateNode } from "./template/nodes.js";
 export { parseTemplate } from "./template/parser/parse-template.js";
+export { normalizeTemplateRelativePath } from "./template/paths.js";
 export { RenderScope, RenderState } from "./template/scope.js";
 export { Template } from "./template/template.js";
 export { HtmlString } from "./utils/html.js";

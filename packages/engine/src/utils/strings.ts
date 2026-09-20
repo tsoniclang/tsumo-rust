@@ -47,7 +47,7 @@ export const substringCount = (source: string, startIndex: int32, length: int32)
 
 export const charAtText = (source: string, index: int32): string => {
   if (index < 0 || index >= source.length) return "";
-  return source.substring(index, index + 1);
+  return source.charAt(index);
 };
 
 export const codePointAtText = (source: string, index: int32): string => {
@@ -58,7 +58,8 @@ export const codePointAtText = (source: string, index: int32): string => {
 export const nextCodePointIndex = (source: string, index: int32): int32 => {
   const codePoint = source.codePointAt(index);
   if (codePoint === undefined) return source.length as int32;
-  return (index + (codePoint > 0xffff ? 2 : 1)) as int32;
+  const width = codePoint <= 0x7f ? 1 : codePoint <= 0x7ff ? 2 : codePoint <= 0xffff ? 3 : 4;
+  return (index + width) as int32;
 };
 
 export const codePointLength = (source: string): int32 => {
@@ -71,22 +72,22 @@ export const codePointLength = (source: string): int32 => {
   return count;
 };
 
-const utf16IndexAtCodePoint = (source: string, codePointIndex: int32): int32 => {
+const nativeIndexAtCodePoint = (source: string, codePointIndex: int32): int32 => {
   if (codePointIndex < 0) substringError();
   let currentCodePoint: int32 = 0;
-  let utf16Index: int32 = 0;
-  while (currentCodePoint < codePointIndex && utf16Index < source.length) {
-    utf16Index = nextCodePointIndex(source, utf16Index);
+  let nativeIndex: int32 = 0;
+  while (currentCodePoint < codePointIndex && nativeIndex < source.length) {
+    nativeIndex = nextCodePointIndex(source, nativeIndex);
     currentCodePoint++;
   }
   if (currentCodePoint !== codePointIndex) substringError();
-  return utf16Index;
+  return nativeIndex;
 };
 
 export const substringCodePoints = (source: string, startIndex: int32, length: int32): string => {
   if (startIndex < 0 || length < 0) substringError();
-  const start = utf16IndexAtCodePoint(source, startIndex);
-  const end = utf16IndexAtCodePoint(source, startIndex + length);
+  const start = nativeIndexAtCodePoint(source, startIndex);
+  const end = nativeIndexAtCodePoint(source, startIndex + length);
   return substringCount(source, start, end - start);
 };
 
@@ -152,17 +153,19 @@ export function zeroPadInteger(value: int32, width: int32): string {
 }
 
 export const trimStartChar = (source: string, ch: string): string => {
+  if (ch === "" || nextCodePointIndex(ch, 0) !== ch.length) return source;
   let start = 0;
-  while (start < source.length && source.substring(start, start + 1) === ch) {
-    start++;
+  while (start < source.length && source.startsWith(ch, start)) {
+    start += ch.length;
   }
   return source.substring(start);
 };
 
 export const trimEndChar = (source: string, ch: string): string => {
+  if (ch === "" || nextCodePointIndex(ch, 0) !== ch.length) return source;
   let end = source.length;
-  while (end > 0 && source.substring(end - 1, end) === ch) {
-    end--;
+  while (end > 0 && source.endsWith(ch, end)) {
+    end -= ch.length;
   }
   return source.substring(0, end);
 };

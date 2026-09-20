@@ -7,8 +7,10 @@ import {
   replaceRegularExpression,
 } from "../../utils/regular-expressions.js";
 import {
+  codePointAtText,
   codePointLength,
   compareText,
+  nextCodePointIndex,
   replaceText,
   substringCodePoints,
   substringCount,
@@ -475,12 +477,12 @@ export const callScalarFunction = (
     for (let argumentIndex = 1; argumentIndex < args.length; argumentIndex++) values.push(args[argumentIndex]!);
 
     const sb = new TextBuilder();
-    let pos = 0;
+    let pos: int32 = 0;
     let valueIndex = 0;
     while (pos < fmt.length) {
-      const ch = substringCount(fmt, pos, 1);
+      const ch = codePointAtText(fmt, pos);
       if (ch === "%" && pos + 1 < fmt.length) {
-        const next = substringCount(fmt, pos + 1, 1);
+        const next = codePointAtText(fmt, pos + 1);
         if (next === "%") {
           sb.append("%");
           pos += 2;
@@ -488,7 +490,7 @@ export const callScalarFunction = (
         }
         let verb = next;
         let width: int32 = 2;
-        if (next === "#" && pos + 2 < fmt.length && substringCount(fmt, pos + 2, 1) === "v") {
+        if (next === "#" && pos + 2 < fmt.length && codePointAtText(fmt, pos + 2) === "v") {
           verb = "#v";
           width = 3;
         }
@@ -500,7 +502,7 @@ export const callScalarFunction = (
         }
       }
       sb.append(ch);
-      pos++;
+      pos = nextCodePointIndex(fmt, pos);
     }
 
     return new StringValue(sb.toString());

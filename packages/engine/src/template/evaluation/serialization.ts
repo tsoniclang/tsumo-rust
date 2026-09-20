@@ -1,6 +1,6 @@
 import { parse as parseNodeUrl } from "node:url";
 import { createTsumoError } from "../../diagnostics.js";
-import { substringCount, substringFrom } from "../../utils/strings.js";
+import { substringFrom, trimEndChar, trimStartChar } from "../../utils/strings.js";
 import { TextBuilder } from "../../utils/text-builder.js";
 import { AnyArrayValue, BoolValue, DateValue, DictValue, HtmlValue, NilValue, NumberValue, StringValue, TemplateValue } from "../values.js";
 import { ParsedUrl } from "../values/url.js";
@@ -54,8 +54,7 @@ export const toJson = (value: TemplateValue): string => {
 export const toJsonString = (value: string): string => {
   const sb = new TextBuilder();
   sb.append("\"");
-  for (let i = 0; i < value.length; i++) {
-    const ch = substringCount(value, i, 1);
+  for (const ch of value) {
     if (ch === "\\") sb.append("\\\\");
     else if (ch === "\"") sb.append("\\\"");
     else if (ch === "\n") sb.append("\\n");
@@ -76,15 +75,11 @@ export const parseUrl = (value: string): ParsedUrl => {
 };
 
 export const trimStartCharacter = (value: string, ch: string): string => {
-  let start = 0;
-  while (start < value.length && substringCount(value, start, 1) === ch) start++;
-  return substringFrom(value, start);
+  return trimStartChar(value, ch);
 };
 
 export const trimEndCharacter = (value: string, ch: string): string => {
-  let end = value.length;
-  while (end > 0 && substringCount(value, end - 1, 1) === ch) end--;
-  return substringCount(value, 0, end);
+  return trimEndChar(value, ch);
 };
 
 export const trimSlashes = (value: string): string => {

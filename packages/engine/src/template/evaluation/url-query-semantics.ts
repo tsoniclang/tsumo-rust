@@ -1,5 +1,6 @@
 import { createTsumoError } from "../../diagnostics.js";
-import { replaceText, substringCount, substringFrom } from "../../utils/strings.js";
+import type { int32 } from "@tsonic/core/types.js";
+import { codePointAtText, nextCodePointIndex, replaceText, substringCount, substringFrom } from "../../utils/strings.js";
 import { decodeUrlComponent } from "../../utils/url-components.js";
 import { UrlQueryValue } from "../values.js";
 
@@ -11,12 +12,12 @@ const isHexDigit = (value: string): boolean => {
 };
 
 const decodeQueryComponent = (value: string): string => {
-  for (let index = 0; index < value.length; index++) {
-    if (substringCount(value, index, 1) !== "%") continue;
+  for (let index: int32 = 0; index < value.length; index = nextCodePointIndex(value, index)) {
+    if (codePointAtText(value, index) !== "%") continue;
     if (
       index + 2 >= value.length ||
-      !isHexDigit(substringCount(value, index + 1, 1)) ||
-      !isHexDigit(substringCount(value, index + 2, 1))
+      !isHexDigit(codePointAtText(value, index + 1)) ||
+      !isHexDigit(codePointAtText(value, index + 2))
     ) {
       throw createTsumoError("TSUMO_TEMPLATE_URL_QUERY_INVALID", "URL query contains an invalid percent escape");
     }

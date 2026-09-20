@@ -1,7 +1,7 @@
 import type { int32 } from "@tsonic/core/types.js";
 
 import { createTsumoError } from "../diagnostics.js";
-import { replaceLineEndings, substringCount, substringFrom } from "../utils/strings.js";
+import { nextCodePointIndex, replaceLineEndings, substringCount, substringFrom } from "../utils/strings.js";
 import { FrontMatter } from "./data.js";
 import { parseJsonFrontMatter } from "./json.js";
 import { ParsedContent } from "./parsed-content.js";
@@ -16,7 +16,7 @@ const tryParseJsonFrontMatter = (text: string, sourcePath?: string): ParsedConte
   let inString = false;
   let escaped = false;
   let end: int32 = -1;
-  for (let index: int32 = start; index < text.length; index++) {
+  for (let index: int32 = start; index < text.length; index = nextCodePointIndex(text, index)) {
     const current = text[index]!;
     if (inString && escaped) {
       escaped = false;

@@ -2,7 +2,7 @@ import type { int32 } from "@tsonic/core/types.js";
 
 import { createTsumoError } from "../diagnostics.js";
 import { ParamKind, ParamValue } from "../params.js";
-import { substringCount } from "../utils/strings.js";
+import { nextCodePointIndex, substringCount } from "../utils/strings.js";
 import { parseStructuredScalar, StructuredScalarFormat } from "../utils/structured-scalars.js";
 import { FrontMatter } from "./data.js";
 
@@ -97,7 +97,7 @@ export const parseFrontMatterStringArray = (
   let start: int32 = 0;
   let quote = "";
   let escaped = false;
-  for (let index: int32 = 0; index <= inner.length; index++) {
+  for (let index: int32 = 0; index <= inner.length; index = index === inner.length ? index + 1 : nextCodePointIndex(inner, index)) {
     const current = index < inner.length ? inner[index]! : ",";
     if (escaped) {
       escaped = false;

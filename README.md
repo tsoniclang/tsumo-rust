@@ -24,7 +24,7 @@ application code.
 
 - `packages/engine` — Tsonic-authored site engine, emitted as the `tsumo_engine` Rust crate.
 - `packages/cli` — Tsonic-authored native `tsumo` binary.
-- `packages/tests` — 40 Tsonic-authored tests compiled into `tsumo-tests`.
+- `packages/tests` — Tsonic-authored tests compiled into `tsumo-tests`, including native text and diagnostic-coordinate proofs.
 - `crates/tsumo_platform` — canonical crate-root exports over private text, Markdown, image, and HTML adapters.
 - `test` — Node-driven end-to-end tests against the compiled Rust binary.
 - `examples/basic-blog` and `examples/docs-site` — executable fixture sites.
@@ -72,7 +72,7 @@ npm run verify-all
 ```
 
 The full gate proves architecture constraints, byte-identical repeated Tsonic
-generation, Rust build/tests, all 40 compiled Tsonic tests, Node end-to-end
+generation, Rust build/tests, every compiled Tsonic test, Node end-to-end
 tests, warning-free clippy, a release build, and identical debug/release site
 output. Verification logs stay under `.temp/verification-runs`.
 

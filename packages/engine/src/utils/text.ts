@@ -1,4 +1,4 @@
-import { replaceText, substringCount, trimEndChar } from "./strings.js";
+import { nextCodePointIndex, replaceText, substringCount, trimEndChar } from "./strings.js";
 
 const wordSeparatorSpace = " ";
 const wordSeparatorDash = "-";
@@ -50,7 +50,8 @@ export const humanizeSlug = (slug: string): string => {
     if (partRaw === undefined) continue;
     const part = partRaw.trim();
     if (part === "") continue;
-    words.push(substringCount(part, 0, 1).toUpperCase() + part.substring(1));
+    const firstEnd = nextCodePointIndex(part, 0);
+    words.push(substringCount(part, 0, firstEnd).toUpperCase() + part.substring(firstEnd));
   }
 
   return words.join(" ");

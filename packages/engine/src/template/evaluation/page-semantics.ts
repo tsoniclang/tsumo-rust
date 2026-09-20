@@ -2,7 +2,7 @@ import { TextBuilder } from "../../utils/text-builder.js";
 import type { int32 } from "@tsonic/core/types.js";
 import { PageContext, SiteContext } from "../../models.js";
 import { ParamKind } from "../../params.js";
-import { compareText, substringCount, substringFrom } from "../../utils/strings.js";
+import { compareText, nextCodePointIndex, substringCount, substringFrom } from "../../utils/strings.js";
 import { toPlainString } from "../runtime-helpers.js";
 import { AnyArrayValue, BoolValue, DictValue, NumberValue, PageArrayValue, PageGroupValue, PageValue, StringArrayValue, StringValue, TemplateValue, VersionStringValue } from "../values.js";
 import type { RenderScope } from "../scope.js";
@@ -19,8 +19,9 @@ export const toTitleCase = (text: string): string => {
     const word = parts[i]!;
     if (word.trim() === "") continue;
     if (sb.length > 0) sb.append(" ");
-    const first = substringCount(word, 0, 1).toUpperCase();
-    const rest = word.length > 1 ? substringFrom(word, 1).toLowerCase() : "";
+    const firstEnd = nextCodePointIndex(word, 0);
+    const first = substringCount(word, 0, firstEnd).toUpperCase();
+    const rest = substringFrom(word, firstEnd).toLowerCase();
     sb.append(first);
     sb.append(rest);
   }

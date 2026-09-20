@@ -30,7 +30,7 @@ class FileSiteOutput {
 
 const normalizeOutputPath = (relativePath: string): string => {
   const normalized = normalizeSitePath(relativePath);
-  if (normalized === "" || normalized.startsWith("/") || isAbsolute(normalized) || (normalized.length >= 2 && normalized[1] === ":")) {
+  if (normalized === "" || normalized.startsWith("/") || isAbsolute(normalized) || normalized.codePointAt(1) === 58) {
     throw createTsumoError("TSUMO_OUTPUT_PATH_ABSOLUTE", `Site output path must be relative: ${relativePath}`);
   }
   const segments = splitSitePath(normalized);
