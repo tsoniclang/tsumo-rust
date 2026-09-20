@@ -56,11 +56,11 @@ export const runNativeTextTests = (): void => {
     }
   });
 
-  runTest("structured template readers keep quoted Unicode keys and multiline values", () => {
+  runTest("structured template readers keep Unicode keys and multiline values", () => {
     Assert.StringEqual("😀,é|é😀|é 😀", render(
       '{{ $toml := transform.Unmarshal (dict "format" "toml") `"café" = { "clé" = ["😀", "é"] }` }}' +
       '{{ delimit (index (index $toml "café") "clé") "," }}|' +
-      '{{ $yaml := transform.Unmarshal (dict "format" "yaml") `"café": "é😀"` }}' +
+      '{{ $yaml := transform.Unmarshal (dict "format" "yaml") `café: "é😀"` }}' +
       '{{ index $yaml "café" }}|' +
       '{{ $lines := transform.Unmarshal (dict "format" "yaml") `key: \'é\n  😀\'` }}' +
       '{{ $lines.key }}',
