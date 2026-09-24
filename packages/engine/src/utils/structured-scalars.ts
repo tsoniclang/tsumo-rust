@@ -22,7 +22,8 @@ const decodeHexEscape = (
   count: int32,
   invalid: StructuredScalarErrorFactory,
 ): string => {
-  if (start + count > source.length) throw invalid(`String escape requires ${count} hexadecimal digits`);
+  const sourceLength = source.length as int32;
+  if (start < 0 || count < 0 || start > sourceLength || count > sourceLength - start) throw invalid(`String escape requires ${count} hexadecimal digits`);
   let value: int32 = 0;
   for (let offset: int32 = 0; offset < count; offset++) {
     const digit = hexValue(source[start + offset]!);
@@ -40,14 +41,15 @@ const decodeSingleQuoted = (
   format: StructuredScalarFormat,
   invalid: StructuredScalarErrorFactory,
 ): string => {
+  const innerLength = inner.length as int32;
   let result = "";
-  for (let index: int32 = 0; index < inner.length; index = nextCodePointIndex(inner, index)) {
+  for (let index: int32 = 0; index < innerLength; index = nextCodePointIndex(inner, index)) {
     const current = codePointAtText(inner, index);
     if (current !== "'") {
       result += current;
       continue;
     }
-    if (format === "yaml" && index + 1 < inner.length && inner[index + 1] === "'") {
+    if (format === "yaml" && index + 1 < innerLength && inner[index + 1] === "'") {
       result += "'";
       index++;
       continue;
@@ -58,15 +60,16 @@ const decodeSingleQuoted = (
 };
 
 const decodeDoubleQuoted = (inner: string, invalid: StructuredScalarErrorFactory): string => {
+  const innerLength = inner.length as int32;
   let result = "";
-  for (let index: int32 = 0; index < inner.length; index = nextCodePointIndex(inner, index)) {
+  for (let index: int32 = 0; index < innerLength; index = nextCodePointIndex(inner, index)) {
     const current = codePointAtText(inner, index);
     if (current === "\"") throw invalid("Double-quoted string contains an unescaped quote");
     if (current !== "\\") {
       result += current;
       continue;
     }
-    if (index + 1 >= inner.length) throw invalid("String ends with an incomplete escape");
+    if (index + 1 >= innerLength) throw invalid("String ends with an incomplete escape");
     index = nextCodePointIndex(inner, index);
     const escaped = codePointAtText(inner, index);
     if (escaped === "\"" || escaped === "\\" || escaped === "/") result += escaped;
@@ -109,7 +112,7 @@ const decodeQuoted = (
   ) {
     throw invalid("String has mismatched quotes");
   }
-  const inner = substringCount(value, 1, value.length - 2);
+  const inner = substringCount(value, 1, (value.length - 2) as int32);
   return startsSingleQuoted ? decodeSingleQuoted(inner, format, invalid) : decodeDoubleQuoted(inner, invalid);
 };
 
@@ -151,8 +154,9 @@ export const parseStructuredScalar = (
 export const stripStructuredComment = (line: string, format: StructuredScalarFormat): string => {
   let quote = "";
   let escaped = false;
+  const lineLength = line.length as int32;
   let previousWasWhitespace = false;
-  for (let index: int32 = 0; index < line.length; index = nextCodePointIndex(line, index)) {
+  for (let index: int32 = 0; index < lineLength; index = nextCodePointIndex(line, index)) {
     const current = codePointAtText(line, index);
     if (escaped) {
       escaped = false;
@@ -167,7 +171,7 @@ export const stripStructuredComment = (line: string, format: StructuredScalarFor
     if (current === "\"" || current === "'") {
       if (quote === "") quote = current;
       else if (quote === current) {
-        if (quote === "'" && format === "yaml" && index + 1 < line.length && line[index + 1] === "'") index++;
+        if (quote === "'" && format === "yaml" && index + 1 < lineLength && line[index + 1] === "'") index++;
         else quote = "";
       }
       previousWasWhitespace = false;

@@ -1,3 +1,4 @@
+import type { int32 } from "@tsonic/core/types.js";
 import { isAbsolute, resolve, sep } from "node:path";
 import { createTsumoError } from "../diagnostics.js";
 import { pathContainsOrEquals } from "../utils/paths.js";
@@ -67,8 +68,8 @@ export const splitResourcePath = (relativePath: string): ResourcePathParts => {
   const index = normalized.lastIndexOf("/");
   if (index < 0) return new ResourcePathParts("", normalized);
   return new ResourcePathParts(
-    substringCount(normalized, 0, index + 1),
-    substringFrom(normalized, index + 1),
+    substringCount(normalized, 0, (index + 1) as int32),
+    substringFrom(normalized, (index + 1) as int32),
   );
 };
 
@@ -76,7 +77,7 @@ export const splitResourceFileName = (fileName: string): ResourceFileNameParts =
   const index = fileName.lastIndexOf(".");
   if (index < 0) return new ResourceFileNameParts(fileName, "");
   return new ResourceFileNameParts(
-    substringCount(fileName, 0, index),
-    substringFrom(fileName, index),
+    substringCount(fileName, 0, index as int32),
+    substringFrom(fileName, index as int32),
   );
 };

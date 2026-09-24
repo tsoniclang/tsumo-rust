@@ -14,8 +14,9 @@ import {
 } from "./scalars.js";
 
 const indentationOf = (line: string): int32 => {
+  const lineLength = line.length as int32;
   let indentation: int32 = 0;
-  while (indentation < line.length && line[indentation] === " ") indentation++;
+  while (indentation < lineLength && line[indentation] === " ") indentation++;
   return indentation;
 };
 
@@ -36,7 +37,7 @@ const splitYamlPair = (
       1,
     );
   }
-  return [substringCount(text, 0, separator).trim(), substringFrom(text, separator + 1).trim()];
+  return [substringCount(text, 0, separator as int32).trim(), substringFrom(text, (separator + 1) as int32).trim()];
 };
 
 const applyMenuProperty = (
@@ -79,9 +80,10 @@ const validateYamlLine = (line: string, sourcePath: string | undefined, lineNumb
 
 export const parseYamlFrontMatter = (lines: string[], sourcePath?: string): FrontMatter => {
   const frontMatter = new FrontMatter();
+  const lineCount = lines.length as int32;
   const rootFields = new Set<string>();
   let index: int32 = 0;
-  while (index < lines.length) {
+  while (index < lineCount) {
     const raw = lines[index]!;
     const lineNumber = index + 2;
     validateYamlLine(raw, sourcePath, lineNumber);
@@ -114,7 +116,7 @@ export const parseYamlFrontMatter = (lines: string[], sourcePath?: string): Fron
     index++;
     if (normalizedKey === "params") {
       const paramFields = new Set<string>();
-      while (index < lines.length && indentationOf(lines[index]!) > 0) {
+      while (index < lineCount && indentationOf(lines[index]!) > 0) {
         const childRaw = lines[index]!;
         const childLine = index + 2;
         validateYamlLine(childRaw, sourcePath, childLine);
@@ -137,7 +139,7 @@ export const parseYamlFrontMatter = (lines: string[], sourcePath?: string): Fron
 
     if (normalizedKey === "tags" || normalizedKey === "categories") {
       const values: string[] = [];
-      while (index < lines.length && indentationOf(lines[index]!) > 0) {
+      while (index < lineCount && indentationOf(lines[index]!) > 0) {
         const childRaw = lines[index]!;
         const childLine = index + 2;
         validateYamlLine(childRaw, sourcePath, childLine);
@@ -161,7 +163,7 @@ export const parseYamlFrontMatter = (lines: string[], sourcePath?: string): Fron
 
     if (normalizedKey === "menu") {
       const menuNames = new Set<string>();
-      while (index < lines.length && indentationOf(lines[index]!) > 0) {
+      while (index < lineCount && indentationOf(lines[index]!) > 0) {
         const entryRaw = lines[index]!;
         const entryLine = index + 2;
         validateYamlLine(entryRaw, sourcePath, entryLine);
@@ -181,7 +183,7 @@ export const parseYamlFrontMatter = (lines: string[], sourcePath?: string): Fron
         const entry = new FrontMatterMenu(entryPair[0]!);
         const menuFields = new Set<string>();
         index++;
-        while (index < lines.length && indentationOf(lines[index]!) > 2) {
+        while (index < lineCount && indentationOf(lines[index]!) > 2) {
           const propertyRaw = lines[index]!;
           const propertyLine = index + 2;
           validateYamlLine(propertyRaw, sourcePath, propertyLine);

@@ -12,10 +12,11 @@ const isHexDigit = (value: string): boolean => {
 };
 
 const decodeQueryComponent = (value: string): string => {
-  for (let index: int32 = 0; index < value.length; index = nextCodePointIndex(value, index)) {
+  const valueLength = value.length as int32;
+  for (let index: int32 = 0; index < valueLength; index = nextCodePointIndex(value, index)) {
     if (codePointAtText(value, index) !== "%") continue;
     if (
-      index + 2 >= value.length ||
+      index + 2 >= valueLength ||
       !isHexDigit(codePointAtText(value, index + 1)) ||
       !isHexDigit(codePointAtText(value, index + 2))
     ) {
@@ -39,8 +40,8 @@ export const parseUrlQuery = (rawQuery: string): UrlQueryValue => {
     const field = fields[index]!;
     if (field === "") continue;
     const separator = field.indexOf("=");
-    const rawName = separator < 0 ? field : substringCount(field, 0, separator);
-    const rawValue = separator < 0 ? "" : substringFrom(field, separator + 1);
+    const rawName = separator < 0 ? field : substringCount(field, 0, separator as int32);
+    const rawValue = separator < 0 ? "" : substringFrom(field, (separator + 1) as int32);
     const name = decodeQueryComponent(rawName);
     const value = decodeQueryComponent(rawValue);
     const existing = values.get(name);

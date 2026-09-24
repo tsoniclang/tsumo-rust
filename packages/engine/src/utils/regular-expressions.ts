@@ -1,4 +1,4 @@
-import type { int32 } from "@tsonic/core/types.js";
+import type { int32, nativeUint } from "@tsonic/core/types.js";
 import { createTsumoError } from "../diagnostics.js";
 import { nextCodePointIndex } from "./strings.js";
 
@@ -9,10 +9,11 @@ export const findRegularExpressionMatches = (
 ): string[] => {
   const expression = compileRegularExpression(pattern);
   if (limit === 0) return [];
+  const maximum: nativeUint = limit > 0 ? limit as nativeUint : 0;
   const result: string[] = [];
   for (const match of input.matchAll(expression)) {
     result.push(requireFullMatch(match));
-    if (limit > 0 && result.length >= limit) break;
+    if (maximum > 0 && result.length >= maximum) break;
   }
   return result;
 };
@@ -24,6 +25,7 @@ export const findRegularExpressionSubmatches = (
 ): string[][] => {
   const expression = compileRegularExpression(pattern);
   if (limit === 0) return [];
+  const maximum: nativeUint = limit > 0 ? limit as nativeUint : 0;
   const result: string[][] = [];
   for (const match of input.matchAll(expression)) {
     const row: string[] = [requireFullMatch(match)];
@@ -31,7 +33,7 @@ export const findRegularExpressionSubmatches = (
       row.push(match[groupIndex] ?? "");
     }
     result.push(row);
-    if (limit > 0 && result.length >= limit) break;
+    if (maximum > 0 && result.length >= maximum) break;
   }
   return result;
 };
@@ -47,11 +49,11 @@ export const replaceRegularExpression = (
   if (limit < 0) return input.replace(expression, replacement);
 
   const result: string[] = [];
-  let cursor: int32 = 0;
+  let cursor: nativeUint = 0;
   let remaining: int32 = limit;
   for (const match of input.matchAll(expression)) {
     if (remaining === 0) break;
-    const matchIndex = match.index as int32;
+    const matchIndex = match.index as nativeUint;
     const fullMatch = requireFullMatch(match);
     result.push(input.slice(cursor, matchIndex));
     result.push(expandRegularExpressionReplacement(
@@ -84,12 +86,13 @@ const expandRegularExpressionReplacement = (
   input: string,
   match: RegExpExecArray,
   fullMatch: string,
-  matchIndex: int32,
+  matchIndex: nativeUint,
 ): string => {
   const result: string[] = [];
-  for (let index: int32 = 0; index < replacement.length; index = nextCodePointIndex(replacement, index)) {
+  const replacementLength = replacement.length as int32;
+  for (let index: int32 = 0; index < replacementLength; index = nextCodePointIndex(replacement, index)) {
     const current = replacement.charAt(index);
-    if (current !== "$" || index + 1 >= replacement.length) {
+    if (current !== "$" || index + 1 >= replacementLength) {
       result.push(current);
       continue;
     }
@@ -119,7 +122,7 @@ const expandRegularExpressionReplacement = (
       if (closing >= 0) {
         const groupName = replacement.slice(index + 2, closing);
         result.push(regularExpressionNamedGroup(match, groupName));
-        index = closing;
+        index = closing as int32;
         continue;
       }
     }
@@ -127,19 +130,19 @@ const expandRegularExpressionReplacement = (
     if (firstDigit >= 0) {
       let captureIndex: int32 = -1;
       let consumedDigits: int32 = 0;
-      if (index + 2 < replacement.length) {
+      if (index + 2 < replacementLength) {
         const secondDigit = digitValue(replacement.charAt(index + 2));
         const twoDigitIndex: int32 = firstDigit * 10 + secondDigit;
         if (
           secondDigit >= 0 &&
           twoDigitIndex > 0 &&
-          twoDigitIndex < match.length
+          (twoDigitIndex as nativeUint) < match.length
         ) {
           captureIndex = twoDigitIndex;
           consumedDigits = 2;
         }
       }
-      if (captureIndex < 0 && firstDigit > 0 && firstDigit < match.length) {
+      if (captureIndex < 0 && firstDigit > 0 && (firstDigit as nativeUint) < match.length) {
         captureIndex = firstDigit;
         consumedDigits = 1;
       }

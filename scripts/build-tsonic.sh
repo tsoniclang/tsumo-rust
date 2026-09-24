@@ -7,7 +7,7 @@ LOG_ROOT="${TSUMO_BUILD_LOG_DIR:-$(mktemp -d "$ROOT/.temp/build-runs/tsonic-XXXX
 mkdir -p "$LOG_ROOT"
 
 packages=(engine cli tests)
-worker_count="${TSUMO_TSONIC_WORKERS:-2}"
+worker_count="${TSUMO_TSONIC_WORKERS:-${TSONIC_TEST_WORKERS:-$(node --input-type=module -e 'import { availableParallelism } from "node:os"; console.log(availableParallelism());')}}"
 node_options="${TSUMO_TSONIC_NODE_OPTIONS:---max-old-space-size=1536}"
 build_timeout="${TSUMO_TSONIC_TIMEOUT:-15m}"
 

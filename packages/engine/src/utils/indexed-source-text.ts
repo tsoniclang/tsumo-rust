@@ -7,14 +7,14 @@ export class IndexedSourceText {
 
   constructor(source: string) {
     this.characters = Array.from(source);
+    this.length = this.characters.length as int32;
     this.utf16Offsets = [0];
     let utf16Offset: int32 = 0;
-    for (let index: int32 = 0; index < this.characters.length; index++) {
+    for (let index: int32 = 0; index < this.length; index++) {
       const codePoint = this.characters[index]!.codePointAt(0)!;
       utf16Offset += codePoint > 0xffff ? 2 : 1;
       this.utf16Offsets.push(utf16Offset);
     }
-    this.length = this.characters.length as int32;
   }
 
   characterAt(index: int32): string {

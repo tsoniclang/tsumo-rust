@@ -141,8 +141,8 @@ const parseInlineMarkdownLink = (line: string): InlineLink | undefined => {
   if (open < 0 || mid < 0 || mid <= open) return undefined;
   const close = line.indexOf(")", mid + 2);
   if (close < 0) return undefined;
-  const title = substringCount(line, open + 1, mid - (open + 1)).trim();
-  const target = substringCount(line, mid + 2, close - (mid + 2)).trim();
+  const title = substringCount(line, (open + 1) as int32, (mid - (open + 1)) as int32).trim();
+  const target = substringCount(line, (mid + 2) as int32, (close - (mid + 2)) as int32).trim();
   if (title === "" || target === "") return undefined;
   return new InlineLink(title, target);
 };

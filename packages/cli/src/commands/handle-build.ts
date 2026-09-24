@@ -15,31 +15,32 @@ export const handleBuild = (args: readonly string[], buildArgStart: int32): void
   let includeDrafts = false;
   let cleanDestinationDir = true;
 
-  for (let i = buildArgStart; i < args.length; i++) {
+  const argumentCount = args.length as int32;
+  for (let i = buildArgStart; i < argumentCount; i++) {
     const a = args[i]!;
     if (a === "--source" || a === "-s") {
-      if (i + 1 >= args.length) {
+      if (i + 1 >= argumentCount) {
         reportUsageError(`Missing value for ${a}`);
         return;
       }
       buildSourceDir = args[i + 1]!;
       i++;
     } else if (a === "--destination" || a === "-d") {
-      if (i + 1 >= args.length) {
+      if (i + 1 >= argumentCount) {
         reportUsageError(`Missing value for ${a}`);
         return;
       }
       buildDestinationDir = args[i + 1]!;
       i++;
     } else if (a === "--baseURL" || a === "--baseurl") {
-      if (i + 1 >= args.length) {
+      if (i + 1 >= argumentCount) {
         reportUsageError(`Missing value for ${a}`);
         return;
       }
       buildBaseURL = args[i + 1]!;
       i++;
     } else if (a === "--themesDir" || a === "--themesdir") {
-      if (i + 1 >= args.length) {
+      if (i + 1 >= argumentCount) {
         reportUsageError(`Missing value for ${a}`);
         return;
       }

@@ -71,8 +71,8 @@ export const callContextFunction = (
   let methodName: string | undefined = undefined;
   if (lastDot > 0) {
     if (startsWithDot || startsWithDollar || startsWithSite || startsWithPage || startsWithHugoStore) {
-      receiverToken = substringCount(trimmedName, 0, lastDot);
-      methodName = substringFrom(trimmedName, lastDot + 1).trim();
+      receiverToken = substringCount(trimmedName, 0, lastDot as int32);
+      methodName = substringFrom(trimmedName, (lastDot + 1) as int32).trim();
     }
   } else if (startsWithDot && lastDot === 0) {
     receiverToken = ".";

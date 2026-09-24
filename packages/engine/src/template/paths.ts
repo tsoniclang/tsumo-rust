@@ -1,3 +1,4 @@
+import type { int32 } from "@tsonic/core/types.js";
 import { createTsumoError } from "../diagnostics.js";
 import { replaceText, substringCount } from "../utils/strings.js";
 
@@ -32,7 +33,7 @@ export const normalizeTemplateRelativePath = (rawPath: string): string => {
 
 const templateDirectory = (relativePath: string): string => {
   const lastSlash = relativePath.lastIndexOf("/");
-  return lastSlash < 0 ? "" : substringCount(relativePath, 0, lastSlash);
+  return lastSlash < 0 ? "" : substringCount(relativePath, 0, lastSlash as int32);
 };
 
 const pushUnique = (values: string[], value: string): void => {

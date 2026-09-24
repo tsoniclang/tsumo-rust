@@ -320,12 +320,13 @@ class JsonParser {
   }
 
   expectKeyword(keyword: string): void {
-    for (let offset: int32 = 0; offset < keyword.length; offset++) {
+    const keywordLength = keyword.length as int32;
+    for (let offset: int32 = 0; offset < keywordLength; offset++) {
       if (this.source.characterAt(this.index + offset) !== keyword[offset]) {
         throw this.syntaxError(`Invalid JSON keyword; expected '${keyword}'`);
       }
     }
-    this.index += keyword.length;
+    this.index += keywordLength;
   }
 
   expect(expected: string): void {
@@ -365,7 +366,7 @@ class JsonParser {
 
   lineIndexAt(index: int32): int32 {
     let low: int32 = 0;
-    let high: int32 = this.lineStarts.length;
+    let high: int32 = this.lineStarts.length as int32;
     while (low < high) {
       const middle = (low + Math.floor((high - low) / 2)) as int32;
       if (this.lineStarts[middle]! <= index) low = middle + 1;

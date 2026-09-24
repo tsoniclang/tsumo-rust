@@ -26,7 +26,8 @@ const decodeFixedEscape = (
   maximum: int32,
   description: string,
 ): string => {
-  if (start + count > source.length) {
+  const sourceLength = source.length as int32;
+  if (start < 0 || count < 0 || start > sourceLength || count > sourceLength - start) {
     throw invalidStringLiteral(`${description} requires exactly ${count} digits`);
   }
 
@@ -48,10 +49,11 @@ const decodeFixedEscape = (
 };
 
 const decodeInterpretedString = (inner: string, quote: string): string => {
+  const innerLength = inner.length as int32;
   let result = "";
   let index: int32 = 0;
 
-  while (index < inner.length) {
+  while (index < innerLength) {
     const current = codePointAtText(inner, index);
     if (current === "\n" || current === "\r") {
       throw invalidStringLiteral("Interpreted template strings cannot contain unescaped line breaks");
@@ -63,7 +65,7 @@ const decodeInterpretedString = (inner: string, quote: string): string => {
     }
 
     const escapeIndex = nextCodePointIndex(inner, index);
-    if (escapeIndex >= inner.length) throw invalidStringLiteral("Template string ends with an incomplete escape");
+    if (escapeIndex >= innerLength) throw invalidStringLiteral("Template string ends with an incomplete escape");
     const escaped = codePointAtText(inner, escapeIndex);
     if (escaped === quote || escaped === "\\") {
       result += escaped;
@@ -109,6 +111,6 @@ export const decodeTemplateStringLiteral = (token: string): string | undefined =
   if (quote !== "\"" && quote !== "'" && quote !== "`") return undefined;
   if (!value.endsWith(quote)) return undefined;
 
-  const inner = substringCount(value, 1, value.length - 2);
+  const inner = substringCount(value, 1, (value.length - 2) as int32);
   return quote === "`" ? inner.replaceAll("\r", "") : decodeInterpretedString(inner, quote);
 };

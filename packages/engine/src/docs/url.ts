@@ -12,8 +12,8 @@ export class UrlSuffixSplit {
 }
 
 export const splitUrlSuffix = (url: string): UrlSuffixSplit => {
-  const q: int32 = url.indexOf("?");
-  const h: int32 = url.indexOf("#");
+  const q: int32 = url.indexOf("?") as int32;
+  const h: int32 = url.indexOf("#") as int32;
   let cut: int32 = -1;
   if (q >= 0 && h >= 0) cut = q < h ? q : h;
   else if (q >= 0) cut = q;

@@ -121,7 +121,7 @@ const maybeRewriteUrl = (urlValue: string, ctx: DocsLinkRewriteContext): string 
     if (mountPrefixLower === "/") {
       resolvedRel = trimStartChar(pathPart, slash);
     } else if (pathLower.startsWith(mountPrefixLower)) {
-      resolvedRel = trimStartChar(substringFrom(pathPart, ctx.mount.urlPrefix.length), slash);
+      resolvedRel = trimStartChar(substringFrom(pathPart, ctx.mount.urlPrefix.length as int32), slash);
     } else {
       return undefined;
     }

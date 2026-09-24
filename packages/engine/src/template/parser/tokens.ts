@@ -58,7 +58,8 @@ export const parseStringLiteral = (token: string): string | undefined => decodeT
 
 export const sliceTokens = (tokens: string[], startIndex: int32): string[] => {
   const result: string[] = [];
-  for (let index = startIndex; index < tokens.length; index++) result.push(tokens[index]!);
+  const tokenCount = tokens.length as int32;
+  for (let index = startIndex; index < tokenCount; index++) result.push(tokens[index]!);
   return result;
 };
 

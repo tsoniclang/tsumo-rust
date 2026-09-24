@@ -1,8 +1,8 @@
-import { TextBuilder } from "../../utils/text-builder.js";
-import type { int32 } from "@tsonic/core/types.js";
+import { plainifyText } from "./text-compatibility.js";
+import type { int32, nativeUint } from "@tsonic/core/types.js";
 import { createTsumoError } from "../../diagnostics.js";
 import { PageContext } from "../../models.js";
-import { codePointAtText, nextCodePointIndex, substringCount, substringFrom } from "../../utils/strings.js";
+import { substringCount, substringFrom } from "../../utils/strings.js";
 import {
   AnyArrayValue, BoolValue, DictValue, NumberValue, PageArrayValue, PageValue,
   NilValue, StringArrayValue, StringValue, TemplateValue,
@@ -230,14 +230,14 @@ export const callCollectionFunction = (
     if (collection instanceof PageArrayValue) {
       const pages = copyPageArray(collection.value);
       const result: PageContext[] = [];
-      for (let i = n; i < pages.length; i++) result.push(pages[i]!);
+      for (let i = n, count = pages.length as int32; i < count; i++) result.push(pages[i]!);
       return new PageArrayValue(result);
     }
 
     if (collection instanceof AnyArrayValue) {
       const items = collection.value;
       const result: TemplateValue[] = [];
-      for (let i = n; i < items.length; i++) result.push(items[i]!);
+      for (let i = n, count = items.length as int32; i < count; i++) result.push(items[i]!);
       return new AnyArrayValue(result);
     }
 
@@ -251,21 +251,24 @@ export const callCollectionFunction = (
 
     if (collection instanceof PageArrayValue) {
       const result: PageContext[] = [];
-      const limit: int32 = Math.min(count, collection.value.length);
+      const length = collection.value.length as int32;
+      const limit = count < length ? count : length;
       for (let i = 0; i < limit; i++) result.push(collection.value[i]!);
       return new PageArrayValue(result);
     }
 
     if (collection instanceof AnyArrayValue) {
       const result: TemplateValue[] = [];
-      const limit: int32 = Math.min(count, collection.value.length);
+      const length = collection.value.length as int32;
+      const limit = count < length ? count : length;
       for (let i = 0; i < limit; i++) result.push(collection.value[i]!);
       return new AnyArrayValue(result);
     }
 
     if (collection instanceof StringArrayValue) {
       const result: string[] = [];
-      const limit: int32 = Math.min(count, collection.value.length);
+      const length = collection.value.length as int32;
+      const limit = count < length ? count : length;
       for (let i = 0; i < limit; i++) result.push(collection.value[i]!);
       return new StringArrayValue(result);
     }
@@ -279,17 +282,19 @@ export const callCollectionFunction = (
 
     if (collection instanceof PageArrayValue) {
       const pages = copyPageArray(collection.value);
-      const start: int32 = pages.length > n ? pages.length - n : 0;
+      const count = pages.length as int32;
+      const start: int32 = count > n ? count - n : 0;
       const result: PageContext[] = [];
-      for (let i = start; i < pages.length; i++) result.push(pages[i]!);
+      for (let i = start; i < count; i++) result.push(pages[i]!);
       return new PageArrayValue(result);
     }
 
     if (collection instanceof AnyArrayValue) {
       const items = collection.value;
-      const start: int32 = items.length > n ? items.length - n : 0;
+      const count = items.length as int32;
+      const start: int32 = count > n ? count - n : 0;
       const result: TemplateValue[] = [];
-      for (let i = start; i < items.length; i++) result.push(items[i]!);
+      for (let i = start; i < count; i++) result.push(items[i]!);
       return new AnyArrayValue(result);
     }
 
@@ -419,24 +424,7 @@ export const callCollectionFunction = (
   }
 
   if (name === "plainify" && args.length >= 1) {
-    const v = args[0]!;
-    const s = toPlainString(v);
-    // Deterministic markup stripping for Tsumo's plainify subset.
-    const sb = new TextBuilder();
-    let inTag = false;
-    for (let i: int32 = 0; i < s.length; i = nextCodePointIndex(s, i)) {
-      const ch = codePointAtText(s, i);
-      if (ch === "<") {
-        inTag = true;
-        continue;
-      }
-      if (ch === ">") {
-        inTag = false;
-        continue;
-      }
-      if (!inTag) sb.append(ch);
-    }
-    return new StringValue(sb.toString());
+    return new StringValue(plainifyText(toPlainString(args[0]!)));
   }
 
   if (name === "cond" && args.length >= 3) {
@@ -522,20 +510,20 @@ export const callCollectionFunction = (
     }
     if (container instanceof StringArrayValue && keyValue instanceof NumberValue) {
       const index = keyValue.value;
-      if (index < 0 || index >= container.value.length) return nil;
+      if (index < 0 || (index as nativeUint) >= container.value.length) return nil;
       return new StringValue(container.value[index]!);
     }
     if (container instanceof AnyArrayValue) {
       if (keyValue instanceof NumberValue) {
         const idx = (keyValue as NumberValue).value;
-        if (idx < 0 || idx >= container.value.length) return nil;
+        if (idx < 0 || (idx as nativeUint) >= container.value.length) return nil;
         return container.value[idx]!;
       }
     }
     if (container instanceof PageArrayValue) {
       if (keyValue instanceof NumberValue) {
         const idx = (keyValue as NumberValue).value;
-        return idx >= 0 && idx < container.value.length ? new PageValue(container.value[idx]!) : nil;
+        return idx >= 0 && (idx as nativeUint) < container.value.length ? new PageValue(container.value[idx]!) : nil;
       }
     }
     return nil;
@@ -583,12 +571,13 @@ export const callCollectionFunction = (
       return new AnyArrayValue(items);
     }
 
-    let start = 0;
+    const delimiterLength = delim.length as int32;
+    let start: int32 = 0;
     while (true) {
-      const idx = s.indexOf(delim, start);
+      const idx = s.indexOf(delim, start) as int32;
       if (idx < 0) break;
       items.push(new StringValue(substringCount(s, start, idx - start)));
-      start = idx + delim.length;
+      start = idx + delimiterLength;
     }
     items.push(new StringValue(substringFrom(s, start)));
     return new AnyArrayValue(items);

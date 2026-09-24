@@ -143,7 +143,7 @@ export class TemplateEnvironment {
       this.deferredRequests.push(request);
     }
 
-    const ordinal: int32 = this.deferredPlacements.length;
+    const ordinal: int32 = this.deferredPlacements.length as int32;
     const token = `\u0000TSUMO-DEFERRED-TEMPLATE:${ordinal}\u0000`;
     this.deferredPlacements.push(new DeferredTemplatePlacement(token, request));
     return token;

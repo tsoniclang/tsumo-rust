@@ -1,5 +1,5 @@
 import { TextBuilder } from "../../utils/text-builder.js";
-import type { int32 } from "@tsonic/core/types.js";
+import type { int32, nativeUint } from "@tsonic/core/types.js";
 import { PageContext, SiteContext } from "../../models.js";
 import { ParamKind } from "../../params.js";
 import { compareText, nextCodePointIndex, substringCount, substringFrom } from "../../utils/strings.js";
@@ -154,8 +154,8 @@ export const pageWeight = (page: PageContext): int32 => {
 
 export const sortPagesByWeight = (pages: PageContext[]): PageContext[] => {
   const sorted = copyPageArray(pages);
-  for (let left: int32 = 0; left < sorted.length; left++) {
-    for (let right: int32 = left + 1; right < sorted.length; right++) {
+  for (let left: nativeUint = 0; left < sorted.length; left++) {
+    for (let right: nativeUint = left + 1; right < sorted.length; right++) {
       if (pageWeight(sorted[left]!) <= pageWeight(sorted[right]!)) continue;
       const temporary = sorted[left]!;
       sorted[left] = sorted[right]!;
@@ -172,7 +172,10 @@ export const sortPagesByWeight = (pages: PageContext[]): PageContext[] => {
 export const reversePages = (pages: PageContext[]): PageContext[] => {
   const len = pages.length;
   const reversed: PageContext[] = [];
-  for (let i = len - 1; i >= 0; i--) reversed.push(pages[i]!);
+  for (let i = len; i > 0;) {
+    i--;
+    reversed.push(pages[i]!);
+  }
   return reversed;
 };
 
@@ -197,7 +200,7 @@ export const resolvePageCollectionProperty = (
   if (property === "bytitle" || property === "bylinktitle") return new PageArrayValue(sortPagesByTitle(collection.value));
   if (property === "byweight") return new PageArrayValue(sortPagesByWeight(collection.value));
   if (property === "reverse") return new PageArrayValue(reversePages(collection.value));
-  if (property === "len") return new NumberValue(collection.value.length);
+  if (property === "len") return new NumberValue(collection.value.length as int32);
   return undefined;
 };
 
@@ -294,7 +297,7 @@ const pageGroupingValue = (page: PageContext, fieldRaw: string): TemplateValue =
   if (field === "slug") return new StringValue(page.slug);
   if (field === "relpermalink") return new StringValue(page.relPermalink);
   if (field.startsWith("params.")) {
-    const parameter = findParam(page.Params, substringFrom(fieldRaw.trim(), "params.".length));
+    const parameter = findParam(page.Params, substringFrom(fieldRaw.trim(), ("params.".length) as int32));
     if (parameter !== undefined) return paramToTemplateValue(parameter);
   }
   throw createTsumoError(
@@ -305,11 +308,11 @@ const pageGroupingValue = (page: PageContext, fieldRaw: string): TemplateValue =
 
 const groupPagesByField = (pages: PageContext[], field: string, ascending: boolean): AnyArrayValue => {
   const groups: PageGroupBuild[] = [];
-  for (let pageIndex: int32 = 0; pageIndex < pages.length; pageIndex++) {
+  for (let pageIndex: nativeUint = 0; pageIndex < pages.length; pageIndex++) {
     const page = pages[pageIndex]!;
     const key = pageGroupingValue(page, field);
     let selected: PageGroupBuild | undefined = undefined;
-    for (let groupIndex: int32 = 0; groupIndex < groups.length; groupIndex++) {
+    for (let groupIndex: nativeUint = 0; groupIndex < groups.length; groupIndex++) {
       if (compareValues(groups[groupIndex]!.key, key) === 0) {
         selected = groups[groupIndex]!;
         break;
@@ -321,8 +324,8 @@ const groupPagesByField = (pages: PageContext[], field: string, ascending: boole
     }
     selected.pages.push(page);
   }
-  for (let left: int32 = 0; left < groups.length; left++) {
-    for (let right: int32 = left + 1; right < groups.length; right++) {
+  for (let left: nativeUint = 0; left < groups.length; left++) {
+    for (let right: nativeUint = left + 1; right < groups.length; right++) {
       const comparison = compareValues(groups[left]!.key, groups[right]!.key);
       if ((ascending && comparison <= 0) || (!ascending && comparison >= 0)) continue;
       const temporary = groups[left]!;
@@ -331,7 +334,7 @@ const groupPagesByField = (pages: PageContext[], field: string, ascending: boole
     }
   }
   const result: TemplateValue[] = [];
-  for (let index: int32 = 0; index < groups.length; index++) {
+  for (let index: nativeUint = 0; index < groups.length; index++) {
     const group = groups[index]!;
     result.push(new PageGroupValue(group.key, group.pages));
   }

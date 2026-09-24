@@ -90,15 +90,16 @@ export const parseFrontMatterStringArray = (
     );
   }
 
-  const inner = substringCount(trimmed, 1, trimmed.length - 2);
+  const inner = substringCount(trimmed, 1, (trimmed.length - 2) as int32);
   if (inner.trim() === "") return [];
+  const innerLength = inner.length as int32;
 
   const values: string[] = [];
   let start: int32 = 0;
   let quote = "";
   let escaped = false;
-  for (let index: int32 = 0; index <= inner.length; index = index === inner.length ? index + 1 : nextCodePointIndex(inner, index)) {
-    const current = index < inner.length ? inner[index]! : ",";
+  for (let index: int32 = 0; index <= innerLength; index = index === innerLength ? index + 1 : nextCodePointIndex(inner, index)) {
+    const current = index < innerLength ? inner[index]! : ",";
     if (escaped) {
       escaped = false;
       continue;

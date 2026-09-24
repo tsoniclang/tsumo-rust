@@ -225,13 +225,13 @@ export const callScalarFunction = (
   if (name === "strings.trimprefix" && args.length >= 2) {
     const prefix = toPlainString(args[0]!);
     const s = toPlainString(args[1]!);
-    return new StringValue(s.startsWith(prefix) ? substringFrom(s, prefix.length) : s);
+    return new StringValue(s.startsWith(prefix) ? substringFrom(s, prefix.length as int32) : s);
   }
 
   if (name === "strings.trimsuffix" && args.length >= 2) {
     const suffix = toPlainString(args[0]!);
     const s = toPlainString(args[1]!);
-    return new StringValue(s.endsWith(suffix) ? substringCount(s, 0, s.length - suffix.length) : s);
+    return new StringValue(s.endsWith(suffix) ? substringCount(s, 0, (s.length - suffix.length) as int32) : s);
   }
 
   if (name === "strings.trim" && args.length >= 2) {
@@ -309,7 +309,7 @@ export const callScalarFunction = (
   if (name === "chomp" && args.length >= 1) {
     let value = toPlainString(args[0]!);
     while (value.endsWith("\n") || value.endsWith("\r")) {
-      value = substringCount(value, 0, value.length - 1);
+      value = substringCount(value, 0, (value.length - 1) as int32);
     }
     return new StringValue(value);
   }
@@ -352,8 +352,10 @@ export const callScalarFunction = (
     const length = toNumber(args[0]!);
     const s = toPlainString(args[1]!);
     const ellipsis = args.length >= 3 ? toPlainString(args[2]!) : "...";
-    if (s.length <= length) return new StringValue(s);
-    const truncLen: int32 = length - ellipsis.length;
+    const sourceLength = s.length as int32;
+    const ellipsisLength = ellipsis.length as int32;
+    if (sourceLength <= length) return new StringValue(s);
+    const truncLen: int32 = length - ellipsisLength;
     if (truncLen <= 0) return new StringValue(substringCount(ellipsis, 0, length));
     return new StringValue(substringCount(s, 0, truncLen) + ellipsis);
   }
@@ -364,7 +366,7 @@ export const callScalarFunction = (
     // Strip wrapping <p> tags for inline use
     let html = md.html.trim();
     if (html.startsWith("<p>") && html.endsWith("</p>")) {
-      html = substringCount(html, 3, html.length - 4);
+      html = substringCount(html, 3, (html.length - 4) as int32);
     }
     return new HtmlValue(new HtmlString(html));
   }
@@ -423,38 +425,38 @@ export const callScalarFunction = (
   if (name === "len" && args.length >= 1) {
     const v = args[0]!;
     if (v instanceof StringValue) {
-      const l: int32 = v.value.length;
+      const l = v.value.length as int32;
       return new NumberValue(l);
     }
     if (v instanceof HtmlValue) {
-      const l: int32 = v.value.value.length;
+      const l = v.value.value.length as int32;
       return new NumberValue(l);
     }
     if (v instanceof PageArrayValue) {
-      const l: int32 = v.value.length;
+      const l = v.value.length as int32;
       return new NumberValue(l);
     }
     if (v instanceof StringArrayValue) {
-      const l: int32 = v.value.length;
+      const l = v.value.length as int32;
       return new NumberValue(l);
     }
     if (v instanceof SitesArrayValue) {
-      const l: int32 = v.value.length;
+      const l = v.value.length as int32;
       return new NumberValue(l);
     }
     if (v instanceof DocsMountArrayValue) {
-      const l: int32 = v.value.length;
+      const l = v.value.length as int32;
       return new NumberValue(l);
     }
     if (v instanceof NavArrayValue) {
-      const l: int32 = v.value.length;
+      const l = v.value.length as int32;
       return new NumberValue(l);
     }
     if (v instanceof DictValue) {
-      return new NumberValue(v.value.size);
+      return new NumberValue(v.value.size as int32);
     }
     if (v instanceof AnyArrayValue) {
-      return new NumberValue(v.value.length);
+      return new NumberValue(v.value.length as int32);
     }
     return new NumberValue(0);
   }
@@ -473,15 +475,16 @@ export const callScalarFunction = (
 
   if (name === "printf" && args.length >= 1) {
     const fmt = toPlainString(args[0]!);
+    const formatLength = fmt.length as int32;
     const values: TemplateValue[] = [];
     for (let argumentIndex = 1; argumentIndex < args.length; argumentIndex++) values.push(args[argumentIndex]!);
 
     const sb = new TextBuilder();
     let pos: int32 = 0;
     let valueIndex = 0;
-    while (pos < fmt.length) {
+    while (pos < formatLength) {
       const ch = codePointAtText(fmt, pos);
-      if (ch === "%" && pos + 1 < fmt.length) {
+      if (ch === "%" && pos + 1 < formatLength) {
         const next = codePointAtText(fmt, pos + 1);
         if (next === "%") {
           sb.append("%");
@@ -490,7 +493,7 @@ export const callScalarFunction = (
         }
         let verb = next;
         let width: int32 = 2;
-        if (next === "#" && pos + 2 < fmt.length && codePointAtText(fmt, pos + 2) === "v") {
+        if (next === "#" && pos + 2 < formatLength && codePointAtText(fmt, pos + 2) === "v") {
           verb = "#v";
           width = 3;
         }

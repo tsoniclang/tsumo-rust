@@ -41,6 +41,7 @@ const applyMenuProperty = (
 
 export const parseTomlFrontMatter = (lines: string[], sourcePath?: string): FrontMatter => {
   const frontMatter = new FrontMatter();
+  const lineCount = lines.length as int32;
   let table = "";
   let menuEntry: FrontMatterMenu | undefined;
   const rootFields = new Set<string>();
@@ -49,7 +50,7 @@ export const parseTomlFrontMatter = (lines: string[], sourcePath?: string): Fron
   let tableFields = new Set<string>();
   let menuFields = new Set<string>();
 
-  for (let index: int32 = 0; index < lines.length; index++) {
+  for (let index: int32 = 0; index < lineCount; index++) {
     const lineNumber = index + 2;
     const line = stripStructuredComment(lines[index]!, "toml").trim();
     if (line === "") continue;
@@ -58,12 +59,12 @@ export const parseTomlFrontMatter = (lines: string[], sourcePath?: string): Fron
       if (!line.endsWith("]]")) {
         throw createTsumoError("TSUMO_FRONTMATTER_TOML_SYNTAX_INVALID", "Malformed TOML array table", sourcePath, lineNumber, 1);
       }
-      table = substringCount(line, 2, line.length - 4).trim().toLowerCase();
+      table = substringCount(line, 2, (line.length - 4) as int32).trim().toLowerCase();
       if (!table.startsWith("menu.") || table.length === "menu.".length) {
         throw createTsumoError("TSUMO_FRONTMATTER_TOML_TABLE_UNSUPPORTED", `Unsupported front matter TOML array table '${table}'`, sourcePath, lineNumber, 1);
       }
-      recordFrontMatterField(menuNames, substringFrom(table, "menu.".length), "Front matter menu", sourcePath, lineNumber);
-      menuEntry = new FrontMatterMenu(substringFrom(table, "menu.".length));
+      recordFrontMatterField(menuNames, substringFrom(table, ("menu.".length) as int32), "Front matter menu", sourcePath, lineNumber);
+      menuEntry = new FrontMatterMenu(substringFrom(table, ("menu.".length) as int32));
       menuFields = new Set<string>();
       frontMatter.menus.push(menuEntry);
       continue;
@@ -73,7 +74,7 @@ export const parseTomlFrontMatter = (lines: string[], sourcePath?: string): Fron
       if (!line.endsWith("]")) {
         throw createTsumoError("TSUMO_FRONTMATTER_TOML_SYNTAX_INVALID", "Malformed TOML table", sourcePath, lineNumber, 1);
       }
-      table = substringCount(line, 1, line.length - 2).trim().toLowerCase();
+      table = substringCount(line, 1, (line.length - 2) as int32).trim().toLowerCase();
       if (table !== "params") {
         throw createTsumoError("TSUMO_FRONTMATTER_TOML_TABLE_UNSUPPORTED", `Unsupported front matter TOML table '${table}'`, sourcePath, lineNumber, 1);
       }
@@ -96,8 +97,8 @@ export const parseTomlFrontMatter = (lines: string[], sourcePath?: string): Fron
         1,
       );
     }
-    const key = substringCount(line, 0, separator).trim();
-    const value = substringFrom(line, separator + 1).trim();
+    const key = substringCount(line, 0, separator as int32).trim();
+    const value = substringFrom(line, (separator + 1) as int32).trim();
     if (value === "") {
       throw createTsumoError("TSUMO_FRONTMATTER_TOML_SYNTAX_INVALID", `Front matter field '${key}' requires a value`, sourcePath, lineNumber, 1);
     }

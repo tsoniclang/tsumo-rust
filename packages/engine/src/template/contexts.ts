@@ -1,4 +1,4 @@
-import type { int32 } from "@tsonic/core/types.js";
+import type { int32, nativeUint } from "@tsonic/core/types.js";
 import { PageContext, SiteContext } from "../models.js";
 import { ParamValue } from "../params.js";
 import { innerDeindent } from "../shortcode.js";
@@ -45,7 +45,7 @@ export class ShortcodeContext {
       return this.Params.get(keyOrIndex);
     }
     const idx = parseInt32(keyOrIndex);
-    if (idx !== undefined && idx >= 0 && idx < this.positionalParams.length) {
+    if (idx !== undefined && idx >= 0 && (idx as nativeUint) < this.positionalParams.length) {
       return ParamValue.string(this.positionalParams[idx]!);
     }
     return undefined;

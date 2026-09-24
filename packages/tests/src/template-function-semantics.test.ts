@@ -3,6 +3,10 @@ import { captureDiagnosticCode, render } from "./template-test-harness.js";
 
 export class TemplateFunctionSemanticsTests {
   template_namespaces_expose_exact_string_and_hugo_functions(): void {
+    Assert.StringEqual("", render('{{ delimit (collections.Reverse (slice)) "," }}'));
+    Assert.StringEqual("only", render('{{ delimit (collections.Reverse (slice "only")) "," }}'));
+    Assert.StringEqual("c,b,a", render('{{ delimit (collections.Reverse (strings.Split "a,b,c" ",")) "," }}'));
+    Assert.StringEqual("only", render('{{ delimit (collections.Reverse (strings.Split "only" ",")) "," }}'));
     Assert.StringEqual("=====", render("{{ strings.Repeat 5 \"=\" }}"));
     Assert.StringEqual("Hello World", render("{{ strings.Title \"hello world\" }}"));
     Assert.StringEqual("3|9|4|4|5", render(
