@@ -111,6 +111,6 @@ export const decodeTemplateStringLiteral = (token: string): string | undefined =
   if (quote !== "\"" && quote !== "'" && quote !== "`") return undefined;
   if (!value.endsWith(quote)) return undefined;
 
-  const inner = substringCount(value, 1, value.length - 2);
+  const inner = substringCount(value, 1, (value.length - 2) as int32);
   return quote === "`" ? inner.replaceAll("\r", "") : decodeInterpretedString(inner, quote);
 };

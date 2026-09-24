@@ -409,7 +409,7 @@ export const parseShortcodes = (text: string, sourcePath?: string): ShortcodeCal
     const content = substringCount(text, openPos + 3, closePos - (openPos + 3)).trim();
     const isSelfClosing = content.endsWith("/");
     const tagContent = isSelfClosing
-      ? substringCount(content, 0, content.length - 1).trim()
+      ? substringCount(content, 0, (content.length - 1) as int32).trim()
       : content;
 
     if (tagContent.startsWith("/*")) {
@@ -418,8 +418,8 @@ export const parseShortcodes = (text: string, sourcePath?: string): ShortcodeCal
     }
 
     const firstSpace = tagContent.indexOf(" ");
-    const name = firstSpace >= 0 ? substringCount(tagContent, 0, firstSpace).trim() : tagContent.trim();
-    const argsText = firstSpace >= 0 ? substringFrom(tagContent, firstSpace + 1) : "";
+    const name = firstSpace >= 0 ? substringCount(tagContent, 0, firstSpace as int32).trim() : tagContent.trim();
+    const argsText = firstSpace >= 0 ? substringFrom(tagContent, (firstSpace + 1) as int32) : "";
 
     if (name === "" || name.startsWith("/")) {
       if (name.startsWith("/")) {

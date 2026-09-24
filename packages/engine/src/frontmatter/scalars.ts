@@ -90,7 +90,7 @@ export const parseFrontMatterStringArray = (
     );
   }
 
-  const inner = substringCount(trimmed, 1, trimmed.length - 2);
+  const inner = substringCount(trimmed, 1, (trimmed.length - 2) as int32);
   if (inner.trim() === "") return [];
   const innerLength = inner.length as int32;
 

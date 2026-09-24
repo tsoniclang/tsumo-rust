@@ -86,7 +86,7 @@ const sortPaths = (paths: string[]): void => {
 
 export const withoutMarkdownExtension = (fileName: string): string =>
   fileName.toLowerCase().endsWith(".md")
-    ? substringCount(fileName, 0, fileName.length - 3)
+    ? substringCount(fileName, 0, (fileName.length - 3) as int32)
     : fileName;
 
 const isIndexMarkdownFile = (fileName: string): boolean => {

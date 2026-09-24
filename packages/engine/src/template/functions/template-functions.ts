@@ -1,3 +1,4 @@
+import type { int32 } from "@tsonic/core/types.js";
 import { createTsumoError } from "../../diagnostics.js";
 import { HtmlString, decodeHtml, escapeHtml } from "../../utils/html.js";
 import { replaceText, substringFrom } from "../../utils/strings.js";
@@ -183,7 +184,7 @@ export const callTemplateFunctionFamily = (
     const normalized = trimEndCharacter(replaceText(raw, "\\", "/"), "/");
     if (normalized === "") return new StringValue("");
     const idx = normalized.lastIndexOf("/");
-    return idx >= 0 ? new StringValue(substringFrom(normalized, idx + 1)) : new StringValue(normalized);
+    return idx >= 0 ? new StringValue(substringFrom(normalized, (idx + 1) as int32)) : new StringValue(normalized);
   }
 
   if (name === "path.ext" && args.length >= 1) {

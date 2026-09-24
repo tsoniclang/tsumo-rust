@@ -8,7 +8,7 @@ export const addDocsDirectoryWithParents = (directory: string, directories: Map<
     directories.set(current, true);
     if (current === "") return;
     const separator = current.lastIndexOf("/");
-    current = separator < 0 ? "" : substringCount(current, 0, separator);
+    current = separator < 0 ? "" : substringCount(current, 0, separator as int32);
   }
 };
 
@@ -26,12 +26,12 @@ export const docsDirectoryDepth = (directory: string): int32 => {
 
 export const docsParentDirectory = (directory: string): string => {
   const separator = directory.lastIndexOf("/");
-  return separator < 0 ? "" : substringCount(directory, 0, separator);
+  return separator < 0 ? "" : substringCount(directory, 0, separator as int32);
 };
 
 export const docsDirectoryName = (directory: string): string => {
   const separator = directory.lastIndexOf("/");
-  return separator < 0 ? directory : substringFrom(directory, separator + 1);
+  return separator < 0 ? directory : substringFrom(directory, (separator + 1) as int32);
 };
 
 export const assignDocsPageAncestry = (

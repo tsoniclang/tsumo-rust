@@ -1,3 +1,4 @@
+import type { int32 } from "@tsonic/core/types.js";
 import { createTsumoError } from "../diagnostics.js";
 import { compareText, substringCount } from "../utils/strings.js";
 
@@ -9,7 +10,7 @@ export const joinSitePath = (segments: string[]): string => segments.join("/");
 
 export const withoutMarkdownExtension = (fileName: string): string =>
   fileName.toLowerCase().endsWith(".md")
-    ? substringCount(fileName, 0, fileName.length - 3)
+    ? substringCount(fileName, 0, (fileName.length - 3) as int32)
     : fileName;
 
 export const siteOutputPath = (routeSegments: string[]): string =>

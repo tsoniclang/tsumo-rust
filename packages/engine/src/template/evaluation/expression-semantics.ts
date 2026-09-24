@@ -64,7 +64,7 @@ export const evalToken = (token: string, scope: RenderScope): TemplateValue => {
   }
   if (t === "hugo.Data") return scope.env.getSiteData();
   if (t.startsWith("hugo.Data.")) {
-    const segs = substringFrom(t, "hugo.Data.".length).split(".");
+    const segs = substringFrom(t, ("hugo.Data.".length) as int32).split(".");
     return resolvePath(scope.env.getSiteData(), segs, scope);
   }
   if (t === "hugo.Store") return new ScratchValue(scope.env.getGlobalStore());

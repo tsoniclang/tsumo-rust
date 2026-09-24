@@ -197,7 +197,7 @@ export const resolvePageCollectionProperty = (
   if (property === "bytitle" || property === "bylinktitle") return new PageArrayValue(sortPagesByTitle(collection.value));
   if (property === "byweight") return new PageArrayValue(sortPagesByWeight(collection.value));
   if (property === "reverse") return new PageArrayValue(reversePages(collection.value));
-  if (property === "len") return new NumberValue(collection.value.length);
+  if (property === "len") return new NumberValue(collection.value.length as int32);
   return undefined;
 };
 
@@ -294,7 +294,7 @@ const pageGroupingValue = (page: PageContext, fieldRaw: string): TemplateValue =
   if (field === "slug") return new StringValue(page.slug);
   if (field === "relpermalink") return new StringValue(page.relPermalink);
   if (field.startsWith("params.")) {
-    const parameter = findParam(page.Params, substringFrom(fieldRaw.trim(), "params.".length));
+    const parameter = findParam(page.Params, substringFrom(fieldRaw.trim(), ("params.".length) as int32));
     if (parameter !== undefined) return paramToTemplateValue(parameter);
   }
   throw createTsumoError(

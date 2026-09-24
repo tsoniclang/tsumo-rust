@@ -112,7 +112,7 @@ const decodeQuoted = (
   ) {
     throw invalid("String has mismatched quotes");
   }
-  const inner = substringCount(value, 1, value.length - 2);
+  const inner = substringCount(value, 1, (value.length - 2) as int32);
   return startsSingleQuoted ? decodeSingleQuoted(inner, format, invalid) : decodeDoubleQuoted(inner, invalid);
 };
 

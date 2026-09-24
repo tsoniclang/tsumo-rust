@@ -1,3 +1,4 @@
+import type { int32 } from "@tsonic/core/types.js";
 import { parse as parseNodeUrl } from "node:url";
 import { createTsumoError } from "../../diagnostics.js";
 import { substringFrom, trimEndChar, trimStartChar } from "../../utils/strings.js";
@@ -9,7 +10,7 @@ export const getPathExtension = (path: string): string => {
   const lastDot = path.lastIndexOf(".");
   const lastSlash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
   if (lastDot < 0 || lastDot <= lastSlash) return "";
-  return substringFrom(path, lastDot);
+  return substringFrom(path, lastDot as int32);
 };
 
 export const toJson = (value: TemplateValue): string => {

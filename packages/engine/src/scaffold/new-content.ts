@@ -1,3 +1,4 @@
+import type { int32 } from "@tsonic/core/types.js";
 import { basename, isAbsolute, join, resolve } from "node:path";
 
 import { fileExists, readTextFile, writeTextFile } from "../fs.js";
@@ -39,7 +40,7 @@ export const newContent = (siteDir: string, contentPathRaw: string, creationTime
 
   const baseName = basename(withExt);
   const fileName = baseName !== "" ? baseName : withExt;
-  const slug = slugify(fileName.toLowerCase().endsWith(".md") ? substringCount(fileName, 0, fileName.length - 3) : fileName);
+  const slug = slugify(fileName.toLowerCase().endsWith(".md") ? substringCount(fileName, 0, (fileName.length - 3) as int32) : fileName);
   const title = humanizeSlug(slug);
   const date = (creationTime ?? new Date()).toISOString();
 

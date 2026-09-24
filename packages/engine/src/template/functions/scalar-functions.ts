@@ -225,13 +225,13 @@ export const callScalarFunction = (
   if (name === "strings.trimprefix" && args.length >= 2) {
     const prefix = toPlainString(args[0]!);
     const s = toPlainString(args[1]!);
-    return new StringValue(s.startsWith(prefix) ? substringFrom(s, prefix.length) : s);
+    return new StringValue(s.startsWith(prefix) ? substringFrom(s, prefix.length as int32) : s);
   }
 
   if (name === "strings.trimsuffix" && args.length >= 2) {
     const suffix = toPlainString(args[0]!);
     const s = toPlainString(args[1]!);
-    return new StringValue(s.endsWith(suffix) ? substringCount(s, 0, s.length - suffix.length) : s);
+    return new StringValue(s.endsWith(suffix) ? substringCount(s, 0, (s.length - suffix.length) as int32) : s);
   }
 
   if (name === "strings.trim" && args.length >= 2) {
@@ -309,7 +309,7 @@ export const callScalarFunction = (
   if (name === "chomp" && args.length >= 1) {
     let value = toPlainString(args[0]!);
     while (value.endsWith("\n") || value.endsWith("\r")) {
-      value = substringCount(value, 0, value.length - 1);
+      value = substringCount(value, 0, (value.length - 1) as int32);
     }
     return new StringValue(value);
   }
@@ -366,7 +366,7 @@ export const callScalarFunction = (
     // Strip wrapping <p> tags for inline use
     let html = md.html.trim();
     if (html.startsWith("<p>") && html.endsWith("</p>")) {
-      html = substringCount(html, 3, html.length - 4);
+      html = substringCount(html, 3, (html.length - 4) as int32);
     }
     return new HtmlValue(new HtmlString(html));
   }

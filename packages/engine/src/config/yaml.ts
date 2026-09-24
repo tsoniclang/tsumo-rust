@@ -24,7 +24,7 @@ const splitPair = (text: string, sourcePath: string | undefined, line: int32): s
   if (separator <= 0) {
     throw createTsumoError("TSUMO_CONFIG_SYNTAX_INVALID", "YAML configuration entries require 'key: value' syntax", sourcePath, line, 1);
   }
-  return [substringCount(text, 0, separator).trim(), substringFrom(text, separator + 1).trim()];
+  return [substringCount(text, 0, separator as int32).trim(), substringFrom(text, (separator + 1) as int32).trim()];
 };
 
 const recordField = (

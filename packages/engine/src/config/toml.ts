@@ -15,8 +15,8 @@ const splitAssignment = (line: string, sourcePath: string | undefined, lineNumbe
   if (separator <= 0) {
     throw createTsumoError("TSUMO_CONFIG_SYNTAX_INVALID", "TOML configuration entries require 'key = value' syntax", sourcePath, lineNumber, 1);
   }
-  const key = substringCount(line, 0, separator).trim();
-  const value = substringFrom(line, separator + 1).trim();
+  const key = substringCount(line, 0, separator as int32).trim();
+  const value = substringFrom(line, (separator + 1) as int32).trim();
   if (value === "") throw createTsumoError("TSUMO_CONFIG_INVALID_FIELD", `Configuration field '${key}' requires a value`, sourcePath, lineNumber, 1);
   return [key, value];
 };
@@ -159,9 +159,9 @@ export const parseTomlConfig = (text: string, sourcePath?: string): SiteConfig =
     if (line === "") continue;
     if (line.startsWith("[[")) {
       if (!line.endsWith("]]")) throw createTsumoError("TSUMO_CONFIG_SYNTAX_INVALID", "Malformed TOML array table", sourcePath, lineNumber, 1);
-      table = substringCount(line, 2, line.length - 4).trim().toLowerCase();
+      table = substringCount(line, 2, (line.length - 4) as int32).trim().toLowerCase();
       if (!table.startsWith("menu.") || table.length === "menu.".length) throw createTsumoError("TSUMO_CONFIG_TABLE_UNSUPPORTED", `Unsupported TOML array table '${table}'`, sourcePath, lineNumber, 1);
-      const menuName = substringFrom(table, "menu.".length);
+      const menuName = substringFrom(table, ("menu.".length) as int32);
       currentMenu = new MenuEntryBuilder(menuName);
       menuFields = new Set<string>();
       const entries = menuBuilders.get(menuName) ?? [];
@@ -171,14 +171,14 @@ export const parseTomlConfig = (text: string, sourcePath?: string): SiteConfig =
     }
     if (line.startsWith("[")) {
       if (!line.endsWith("]")) throw createTsumoError("TSUMO_CONFIG_SYNTAX_INVALID", "Malformed TOML table", sourcePath, lineNumber, 1);
-      table = substringCount(line, 1, line.length - 2).trim().toLowerCase();
+      table = substringCount(line, 1, (line.length - 2) as int32).trim().toLowerCase();
       currentMenu = undefined;
       if (declaredTables.has(table)) throw createTsumoError("TSUMO_CONFIG_DUPLICATE_FIELD", `Configuration table '${table}' is declared more than once`, sourcePath, lineNumber, 1);
       declaredTables.add(table);
       tableFields = new Set<string>();
       if (table === "params") continue;
       if (table.startsWith("languages.") && table.length > "languages.".length) {
-        const lang = substringFrom(table, "languages.".length);
+        const lang = substringFrom(table, ("languages.".length) as int32);
         if (!languages.has(lang)) languages.set(lang, new LanguageConfigBuilder(lang));
         continue;
       }
@@ -197,7 +197,7 @@ export const parseTomlConfig = (text: string, sourcePath?: string): SiteConfig =
       config.Params.set(key, parseConfigParam(value, "toml", sourcePath, lineNumber));
     }
     else if (table.startsWith("languages.")) {
-      const lang = substringFrom(table, "languages.".length);
+      const lang = substringFrom(table, ("languages.".length) as int32);
       const language = languages.get(lang);
       if (language === undefined) throw createTsumoError("TSUMO_CONFIG_TABLE_UNSUPPORTED", `Unknown language table '${table}'`, sourcePath, lineNumber, 1);
       recordField(tableFields, key, `Language '${lang}'`, sourcePath, lineNumber);
@@ -244,7 +244,7 @@ export const mergeTomlIntoConfig = (
       const line = stripStructuredComment(lines[index]!, "toml").trim();
       if (line === "") continue;
       if (line.startsWith("[") && line.endsWith("]") && !line.startsWith("[[")) {
-        prefix = substringCount(line, 1, line.length - 2).trim();
+        prefix = substringCount(line, 1, (line.length - 2) as int32).trim();
         const normalized = prefix.toLowerCase();
         if (tables.has(normalized)) {
           throw createTsumoError("TSUMO_CONFIG_DUPLICATE_FIELD", `Configuration params table '${prefix}' is declared more than once`, sourcePath, lineNumber, 1);
@@ -271,7 +271,7 @@ export const mergeTomlIntoConfig = (
     const fields = new Map<string, Set<string>>();
     const tables = new Set<string>();
     let current = "";
-    if (!aggregate) current = substringCount(lower, "languages.".length, lower.length - "languages.".length - ".toml".length);
+    if (!aggregate) current = substringCount(lower, "languages.".length as int32, (lower.length - "languages.".length - ".toml".length) as int32);
     for (let index: int32 = 0; index < lineCount; index++) {
       const lineNumber = index + 1;
       const line = stripStructuredComment(lines[index]!, "toml").trim();
@@ -280,7 +280,7 @@ export const mergeTomlIntoConfig = (
         if (!aggregate) {
           throw createTsumoError("TSUMO_CONFIG_TABLE_UNSUPPORTED", `Language file '${fileName}' accepts fields only for '${current}'`, sourcePath, lineNumber, 1);
         }
-        current = substringCount(line, 1, line.length - 2).trim().toLowerCase();
+        current = substringCount(line, 1, (line.length - 2) as int32).trim().toLowerCase();
         if (current === "" || current.includes(".")) throw createTsumoError("TSUMO_CONFIG_TABLE_UNSUPPORTED", `Unsupported language table '${current}'`, sourcePath, lineNumber, 1);
         if (tables.has(current)) throw createTsumoError("TSUMO_CONFIG_DUPLICATE_FIELD", `Language table '${current}' is declared more than once`, sourcePath, lineNumber, 1);
         tables.add(current);
@@ -313,7 +313,7 @@ export const mergeTomlIntoConfig = (
   }
 
   if (lower.startsWith("menus.") && lower.endsWith(".toml")) {
-    const menuName = substringCount(lower, "menus.".length, lower.length - "menus.".length - ".toml".length);
+    const menuName = substringCount(lower, "menus.".length as int32, (lower.length - "menus.".length - ".toml".length) as int32);
     if (menuName === "") throw createTsumoError("TSUMO_CONFIG_FILE_UNSUPPORTED", `Unsupported split configuration file '${fileName}'`, sourcePath);
     const builders: MenuEntryBuilder[] = [];
     let current: MenuEntryBuilder | undefined;
@@ -323,7 +323,7 @@ export const mergeTomlIntoConfig = (
       const line = stripStructuredComment(lines[index]!, "toml").trim();
       if (line === "") continue;
       if (line.startsWith("[[") && line.endsWith("]]")) {
-        const table = substringCount(line, 2, line.length - 4).trim().toLowerCase();
+        const table = substringCount(line, 2, (line.length - 4) as int32).trim().toLowerCase();
         if (table !== menuName) throw createTsumoError("TSUMO_CONFIG_TABLE_UNSUPPORTED", `Menu file '${fileName}' cannot declare '${table}'`, sourcePath, lineNumber, 1);
         current = new MenuEntryBuilder(menuName);
         fields = new Set<string>();

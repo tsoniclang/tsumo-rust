@@ -1,3 +1,4 @@
+import type { int32 } from "@tsonic/core/types.js";
 import { LanguageContext, MediaType, PageContext, SiteContext } from "../../models.js";
 import { ParamKind, ParamValue } from "../../params.js";
 import { compareText } from "../../utils/strings.js";
@@ -30,7 +31,7 @@ export const taxonomyTermsByCount = (terms: Map<string, PageContext[]>): AnyArra
     if (pages === undefined) continue;
     const fields = new Map<string, TemplateValue>();
     fields.set("Name", new StringValue(name));
-    fields.set("Count", new NumberValue(pages.length));
+    fields.set("Count", new NumberValue(pages.length as int32));
     fields.set("Pages", new PageArrayValue(pages));
     values.push(new DictValue(fields));
   }
