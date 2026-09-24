@@ -53,7 +53,21 @@ export class TemplatePageContextTests {
     older.Params.set("weight", ParamValue.number(20));
     newer.Params.set("weight", ParamValue.number(10));
     const root = createPage(site, "Home", "", "home");
+    Assert.StringEqual("0|0", renderWithRoot(
+      "{{ len .Pages.Reverse }}|{{ len (collections.Reverse .Pages) }}",
+      new PageValue(root),
+    ));
+    root.pages = [older];
+    Assert.StringEqual("Older|Older", renderWithRoot(
+      "{{ range .Pages.Reverse }}{{ .Title }}{{ end }}|{{ range (collections.Reverse .Pages) }}{{ .Title }}{{ end }}",
+      new PageValue(root),
+    ));
     root.pages = [older, newer];
+    Assert.StringEqual("NewerOlder|NewerOlder|OlderNewer", renderWithRoot(
+      "{{ range .Pages.Reverse }}{{ .Title }}{{ end }}|{{ range (collections.Reverse .Pages) }}{{ .Title }}{{ end }}|" +
+      "{{ range .Pages }}{{ .Title }}{{ end }}",
+      new PageValue(root),
+    ));
     const section = createPage(site, "Section", "", "section");
     root.pages.push(section);
     site.pages = root.pages;
