@@ -29,6 +29,6 @@ export function main(): void {
   runTemplateRuntimeTests();
   runThemeCompatibilityTests();
   runNativeTextTests();
-  completeTests(83);
+  completeTests(84);
   return;
 }
