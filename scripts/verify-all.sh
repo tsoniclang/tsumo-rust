@@ -45,6 +45,14 @@ echo "=== complete Rust workspace formatting ==="
 cargo fmt --all -- --check 2>&1 | tee "$VERIFY_ROOT/cargo-fmt.log"
 
 echo "=== Rust workspace build ==="
+native_jobs="${TSUMO_NATIVE_JOBS:-${TSONIC_TEST_CPUS:-$(node --input-type=module -e 'import { availableParallelism } from "node:os"; console.log(availableParallelism());')}}"
+if ! [[ "$native_jobs" =~ ^[1-9][0-9]*$ ]]; then
+  echo "TSUMO_NATIVE_JOBS must be a positive integer" >&2
+  exit 2
+fi
+export CARGO_BUILD_JOBS="$native_jobs"
+export RUST_TEST_THREADS="$native_jobs"
+echo "Native toolchain CPU budget: $native_jobs"
 TSUMO_RUST_LOG_DIR="$VERIFY_ROOT/rust" bash scripts/build-rust.sh
 
 echo "=== Rust workspace tests ==="
