@@ -12,10 +12,11 @@ const isHexDigit = (value: string): boolean => {
 };
 
 const decodeQueryComponent = (value: string): string => {
-  for (let index: int32 = 0; index < value.length; index = nextCodePointIndex(value, index)) {
+  const valueLength = value.length as int32;
+  for (let index: int32 = 0; index < valueLength; index = nextCodePointIndex(value, index)) {
     if (codePointAtText(value, index) !== "%") continue;
     if (
-      index + 2 >= value.length ||
+      index + 2 >= valueLength ||
       !isHexDigit(codePointAtText(value, index + 1)) ||
       !isHexDigit(codePointAtText(value, index + 2))
     ) {

@@ -84,6 +84,7 @@ const parseControlPipeline = (
 
 class TemplateParser {
   segments: TemplateSegment[];
+  segmentCount: int32;
   index: int32;
   defines: Map<string, TemplateNode[]>;
   sourcePath: string | undefined;
@@ -92,6 +93,7 @@ class TemplateParser {
 
   constructor(segments: TemplateSegment[], sourceText: string, sourcePath?: string) {
     this.segments = segments;
+    this.segmentCount = segments.length as int32;
     this.index = 0;
     this.defines = new Map<string, TemplateNode[]>();
     this.sourcePath = sourcePath;
@@ -168,7 +170,7 @@ class TemplateParser {
     opening: TemplateSegment | undefined,
   ): ParseNodesResult {
     const nodes: TemplateNode[] = [];
-    while (this.index < this.segments.length) {
+    while (this.index < this.segmentCount) {
       const sourceSegmentIndex = this.index;
       const segment = this.segments[this.index]!;
       this.index++;
@@ -270,14 +272,15 @@ class TemplateParser {
       }
 
       if (head === "range") {
+        const tokenCount = tokens.length as int32;
         let tokenIndex: int32 = 1;
         let keyVariable: string | undefined = undefined;
         let valueVariable: string | undefined = undefined;
-        const first = tokenIndex < tokens.length ? tokens[tokenIndex]! : "";
+        const first = tokenIndex < tokenCount ? tokens[tokenIndex]! : "";
         const isVariable = first.startsWith("$") && first !== "$" && !first.startsWith("$.");
-        const hasValueDeclaration = tokenIndex + 1 < tokens.length &&
+        const hasValueDeclaration = tokenIndex + 1 < tokenCount &&
           (tokens[tokenIndex + 1] === ":=" || tokens[tokenIndex + 1] === "=");
-        const hasKeyValueDeclaration = tokenIndex + 3 < tokens.length &&
+        const hasKeyValueDeclaration = tokenIndex + 3 < tokenCount &&
           tokens[tokenIndex]!.startsWith("$") &&
           tokens[tokenIndex + 1] === "," &&
           tokens[tokenIndex + 2]!.startsWith("$") &&

@@ -1,5 +1,5 @@
 import { basename, extname } from "node:path";
-import type { int32 } from "@tsonic/core/types.js";
+import type { int32, nativeUint } from "@tsonic/core/types.js";
 import { createTsumoError } from "./diagnostics.js";
 import { listFilesTopDirectory, readTextFile } from "./fs.js";
 import { parseTemplateDataText } from "./template/evaluation/structured-data.js";
@@ -14,7 +14,7 @@ const pluralVariantNames: string[] = ["zero", "one", "two", "few", "many", "othe
 
 const isPluralVariantName = (name: string): boolean => {
   const normalized = name.toLowerCase();
-  for (let index: int32 = 0; index < pluralVariantNames.length; index++) {
+  for (let index: nativeUint = 0; index < pluralVariantNames.length; index++) {
     if (pluralVariantNames[index] === normalized) return true;
   }
   return false;
@@ -35,7 +35,7 @@ class I18nMessage {
     }
     const other = this.variants.get("other");
     if (other !== undefined) return other;
-    for (let index: int32 = 0; index < pluralVariantNames.length; index++) {
+    for (let index: nativeUint = 0; index < pluralVariantNames.length; index++) {
       const value = this.variants.get(pluralVariantNames[index]!);
       if (value !== undefined) return value;
     }
@@ -130,7 +130,7 @@ const collectLegacyMessages = (
   layer: Map<string, I18nMessage>,
   sourcePath: string,
 ): void => {
-  for (let index: int32 = 0; index < values.value.length; index++) {
+  for (let index: nativeUint = 0; index < values.value.length; index++) {
     const item = values.value[index]!;
     if (!(item instanceof DictValue)) {
       throw createTsumoError("TSUMO_I18N_MESSAGE_SHAPE_INVALID", "Internationalization message list entries must be dictionaries", sourcePath);
@@ -174,7 +174,7 @@ export class I18nStore {
     const files = listFilesTopDirectory(dir, "*");
     files.sort();
     const layer = new Map<string, Map<string, I18nMessage>>();
-    for (let index: int32 = 0; index < files.length; index++) {
+    for (let index: nativeUint = 0; index < files.length; index++) {
       const file = files[index]!;
       const extension = extname(file).toLowerCase();
       let format = "";

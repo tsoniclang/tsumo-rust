@@ -77,18 +77,20 @@ const yamlError = (message: string, sourcePath: string | undefined, line: int32)
   createTsumoError("TSUMO_TEMPLATE_UNMARSHAL_YAML_INVALID", message, sourcePath, line, 1);
 
 const yamlSourceIndentation = (raw: string, sourcePath: string | undefined, line: int32): int32 => {
+  const rawLength = raw.length as int32;
   let indentation: int32 = 0;
-  while (indentation < raw.length && raw[indentation] === " ") indentation++;
-  if (indentation < raw.length && raw[indentation] === "\t") {
+  while (indentation < rawLength && raw[indentation] === " ") indentation++;
+  if (indentation < rawLength && raw[indentation] === "\t") {
     throw yamlError("YAML indentation cannot contain tabs", sourcePath, line);
   }
   return indentation;
 };
 
 const yamlMappingSeparator = (value: string): int32 => {
+  const valueLength = value.length as int32;
   let quote = "";
   let escaped = false;
-  for (let index: int32 = 0; index < value.length; index = nextCodePointIndex(value, index)) {
+  for (let index: int32 = 0; index < valueLength; index = nextCodePointIndex(value, index)) {
     const character = value[index]!;
     if (escaped) {
       escaped = false;
@@ -104,35 +106,37 @@ const yamlMappingSeparator = (value: string): int32 => {
       continue;
     }
     if (quote === "" && character === ":" &&
-        (index + 1 === value.length || value[index + 1] === " " || value[index + 1] === "\t")) return index;
+        (index + 1 === valueLength || value[index + 1] === " " || value[index + 1] === "\t")) return index;
   }
   return -1;
 };
 
 const yamlQuotedScalarStart = (content: string): int32 | undefined => {
+  const contentLength = content.length as int32;
   let start: int32 = 0;
   if (content.startsWith("- ")) start = 2;
-  while (start < content.length && (content[start] === " " || content[start] === "\t")) start++;
+  while (start < contentLength && (content[start] === " " || content[start] === "\t")) start++;
   const candidate = substringFrom(content, start);
   const separator = yamlMappingSeparator(candidate);
   if (separator >= 0) {
     start += separator + 1;
-    while (start < content.length && (content[start] === " " || content[start] === "\t")) start++;
+    while (start < contentLength && (content[start] === " " || content[start] === "\t")) start++;
   }
-  if (start >= content.length || (content[start] !== "\"" && content[start] !== "'")) return undefined;
+  if (start >= contentLength || (content[start] !== "\"" && content[start] !== "'")) return undefined;
   return start;
 };
 
 const scanYamlQuotedScalar = (content: string, quoteStart: int32, quote: string): YamlQuoteScan => {
-  for (let index: int32 = quoteStart + 1; index < content.length; index = nextCodePointIndex(content, index)) {
+  const contentLength = content.length as int32;
+  for (let index: int32 = quoteStart + 1; index < contentLength; index = nextCodePointIndex(content, index)) {
     const character = content[index]!;
     if (quote === "\"" && character === "\\") {
-      if (index + 1 >= content.length) return new YamlQuoteScan(false, true);
+      if (index + 1 >= contentLength) return new YamlQuoteScan(false, true);
       index++;
       continue;
     }
     if (character !== quote) continue;
-    if (quote === "'" && index + 1 < content.length && content[index + 1] === "'") {
+    if (quote === "'" && index + 1 < contentLength && content[index + 1] === "'") {
       index++;
       continue;
     }
@@ -147,6 +151,7 @@ const readYamlLogicalLine = (
   indent: int32,
   sourcePath: string | undefined,
 ): YamlLogicalLine => {
+  const sourceLineCount = sourceLines.length as int32;
   const raw = sourceLines[sourceIndex]!;
   let content = stripStructuredComment(substringFrom(raw, indent), "yaml").trimEnd();
   const quoteStart = yamlQuotedScalarStart(content);
@@ -160,7 +165,7 @@ const readYamlLogicalLine = (
   let blankLineCount: int32 = 0;
   while (!scan.closed) {
     if (scan.escapedLineBreak) content = content.slice(0, content.length - 1);
-    if (nextSourceIndex >= sourceLines.length) {
+    if (nextSourceIndex >= sourceLineCount) {
       throw yamlError("String has mismatched quotes", sourcePath, sourceIndex + 1);
     }
     const continuationRaw = sourceLines[nextSourceIndex]!;
@@ -248,7 +253,9 @@ const jsonToTemplateValue = (value: JsonValue): TemplateValue => {
 
 class YamlTemplateParser {
   lines: YamlLine[];
+  lineCount: int32;
   sourceLines: string[];
+  sourceLineCount: int32;
   sourcePath: string | undefined;
 
   constructor(text: string, sourcePath?: string) {
@@ -257,8 +264,9 @@ class YamlTemplateParser {
     const normalized = text.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
     const sourceLines = normalized.split("\n");
     this.sourceLines = sourceLines;
+    this.sourceLineCount = sourceLines.length as int32;
     let index: int32 = 0;
-    while (index < sourceLines.length) {
+    while (index < this.sourceLineCount) {
       const raw = sourceLines[index]!;
       const indent = yamlSourceIndentation(raw, sourcePath, index + 1);
       const logical = readYamlLogicalLine(sourceLines, index, indent, sourcePath);
@@ -268,12 +276,13 @@ class YamlTemplateParser {
       if (content.trim() === "" || content.trim() === "---" || content.trim() === "...") continue;
       this.lines.push(new YamlLine(indent, content, lineNumber));
     }
+    this.lineCount = this.lines.length as int32;
   }
 
   parse(): TemplateValue {
-    if (this.lines.length === 0) return nil;
+    if (this.lineCount === 0) return nil;
     const result = this.parseBlock(0, this.lines[0]!.indent);
-    if (result.nextIndex !== this.lines.length) {
+    if (result.nextIndex !== this.lineCount) {
       const line = this.lines[result.nextIndex]!;
       throw this.error("YAML indentation does not belong to the preceding value", line.lineNumber);
     }
@@ -293,7 +302,7 @@ class YamlTemplateParser {
   parseSequence(index: int32, indent: int32): YamlParseResult {
     const values: TemplateValue[] = [];
     let current = index;
-    while (current < this.lines.length) {
+    while (current < this.lineCount) {
       const line = this.lines[current]!;
       if (line.indent < indent) break;
       if (line.indent !== indent || (line.content !== "-" && !line.content.startsWith("- "))) {
@@ -322,7 +331,7 @@ class YamlTemplateParser {
           } else {
             fields.set(key, this.parseScalar(valueText, line.lineNumber));
           }
-          if (current < this.lines.length && this.lines[current]!.indent > indent) {
+          if (current < this.lineCount && this.lines[current]!.indent > indent) {
             const continuation = this.parseBlock(current, this.lines[current]!.indent);
             if (!(continuation.value instanceof DictValue)) {
               throw this.error("A YAML sequence mapping continuation must be a mapping", this.lines[current]!.lineNumber);
@@ -344,12 +353,12 @@ class YamlTemplateParser {
           continue;
         }
         values.push(this.parseScalar(item, line.lineNumber));
-        if (current < this.lines.length && this.lines[current]!.indent > indent) {
+        if (current < this.lineCount && this.lines[current]!.indent > indent) {
           throw this.error("A scalar YAML sequence entry cannot own an indented block", this.lines[current]!.lineNumber);
         }
         continue;
       }
-      if (current >= this.lines.length || this.lines[current]!.indent <= indent) {
+      if (current >= this.lineCount || this.lines[current]!.indent <= indent) {
         values.push(nil);
         continue;
       }
@@ -363,7 +372,7 @@ class YamlTemplateParser {
   parseMapping(index: int32, indent: int32): YamlParseResult {
     const fields = new Map<string, TemplateValue>();
     let current = index;
-    while (current < this.lines.length) {
+    while (current < this.lineCount) {
       const line = this.lines[current]!;
       if (line.indent < indent) break;
       if (line.indent !== indent || line.content === "-" || line.content.startsWith("- ")) {
@@ -385,12 +394,12 @@ class YamlTemplateParser {
           continue;
         }
         fields.set(key, this.parseScalar(valueText, line.lineNumber));
-        if (current < this.lines.length && this.lines[current]!.indent > indent) {
+        if (current < this.lineCount && this.lines[current]!.indent > indent) {
           throw this.error("A scalar YAML mapping value cannot own an indented block", this.lines[current]!.lineNumber);
         }
         continue;
       }
-      if (current >= this.lines.length || this.lines[current]!.indent <= indent) {
+      if (current >= this.lineCount || this.lines[current]!.indent <= indent) {
         fields.set(key, nil);
         continue;
       }
@@ -405,7 +414,8 @@ class YamlTemplateParser {
     if (!value.startsWith("|") && !value.startsWith(">")) return undefined;
     let chomping: "clip" | "strip" | "keep" = "clip";
     let indentation: int32 | undefined = undefined;
-    for (let index: int32 = 1; index < value.length; index++) {
+    const valueLength = value.length as int32;
+    for (let index: int32 = 1; index < valueLength; index++) {
       const character = value[index]!;
       if (character === "-" || character === "+") {
         if (chomping !== "clip") throw this.error("YAML block scalar has more than one chomping indicator", line);
@@ -430,7 +440,7 @@ class YamlTemplateParser {
   ): YamlParseResult {
     const sourceStart: int32 = headerLine;
     let sourceEnd: int32 = sourceStart;
-    while (sourceEnd < this.sourceLines.length) {
+    while (sourceEnd < this.sourceLineCount) {
       const raw = this.sourceLines[sourceEnd]!;
       if (raw.trim() === "") {
         sourceEnd++;
@@ -442,7 +452,7 @@ class YamlTemplateParser {
     }
 
     let parsedIndex = nextParsedIndex;
-    while (parsedIndex < this.lines.length && this.lines[parsedIndex]!.lineNumber <= sourceEnd) {
+    while (parsedIndex < this.lineCount && this.lines[parsedIndex]!.lineNumber <= sourceEnd) {
       parsedIndex++;
     }
 
@@ -475,7 +485,8 @@ class YamlTemplateParser {
       indentations.push(indentation);
     }
 
-    let lastContentIndex: int32 = values.length - 1;
+    const valueCount = values.length as int32;
+    let lastContentIndex: int32 = valueCount - 1;
     while (lastContentIndex >= 0 && values[lastContentIndex] === "") lastContentIndex--;
     let rendered = "";
     for (let index: int32 = 0; index <= lastContentIndex; index++) {
@@ -495,7 +506,7 @@ class YamlTemplateParser {
     }
     if (header.chomping === "clip") rendered += "\n";
     if (header.chomping === "keep") {
-      const trailingLineCount: int32 = values.length - lastContentIndex;
+      const trailingLineCount: int32 = valueCount - lastContentIndex;
       rendered += "\n".repeat(trailingLineCount);
     }
     return new YamlParseResult(new StringValue(rendered), parsedIndex);

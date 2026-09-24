@@ -11,8 +11,9 @@ import { MenuEntryBuilder } from "./builders.js";
 import { parseConfigInt, parseConfigParam, parseConfigString } from "./scalars.js";
 
 const indentationOf = (line: string): int32 => {
+  const lineLength = line.length as int32;
   let indentation: int32 = 0;
-  while (indentation < line.length && line[indentation] === " ") indentation++;
+  while (indentation < lineLength && line[indentation] === " ") indentation++;
   return indentation;
 };
 
@@ -71,9 +72,10 @@ export const parseYamlConfig = (text: string, sourcePath?: string): SiteConfig =
   const menuBuilders = new Map<string, MenuEntryBuilder[]>();
   const rootFields = new Set<string>();
   const lines = text.replaceAll("\r\n", "\n").replaceAll("\r", "\n").split("\n");
+  const lineCount = lines.length as int32;
 
   let index: int32 = 0;
-  while (index < lines.length) {
+  while (index < lineCount) {
     const raw = lines[index]!;
     const lineNumber = index + 1;
     if (raw.includes("\t")) throw createTsumoError("TSUMO_CONFIG_SYNTAX_INVALID", "YAML configuration indentation must use spaces", sourcePath, lineNumber, 1);
@@ -103,7 +105,7 @@ export const parseYamlConfig = (text: string, sourcePath?: string): SiteConfig =
     index++;
     if (key === "params") {
       const paramFields = new Set<string>();
-      while (index < lines.length && indentationOf(lines[index]!) > 0) {
+      while (index < lineCount && indentationOf(lines[index]!) > 0) {
         const childRaw = lines[index]!;
         const childLine = index + 1;
         const childText = yamlText(childRaw);
@@ -121,7 +123,7 @@ export const parseYamlConfig = (text: string, sourcePath?: string): SiteConfig =
 
     if (key === "menu") {
       const menuNames = new Set<string>();
-      while (index < lines.length && indentationOf(lines[index]!) > 0) {
+      while (index < lineCount && indentationOf(lines[index]!) > 0) {
         const menuRaw = lines[index]!;
         const menuLine = index + 1;
         const menuText = yamlText(menuRaw);
@@ -136,7 +138,7 @@ export const parseYamlConfig = (text: string, sourcePath?: string): SiteConfig =
         recordField(menuNames, menuName, "Configuration menu", sourcePath, menuLine);
         const entries = menuBuilders.get(menuName) ?? [];
         index++;
-        while (index < lines.length && indentationOf(lines[index]!) > 2) {
+        while (index < lineCount && indentationOf(lines[index]!) > 2) {
           const entryRaw = lines[index]!;
           const entryLine = index + 1;
           const entryText = yamlText(entryRaw);
@@ -152,7 +154,7 @@ export const parseYamlConfig = (text: string, sourcePath?: string): SiteConfig =
           recordField(entryFields, first[0]!, `Menu '${menuName}' entry`, sourcePath, entryLine);
           applyMenuField(builder, first[0]!, first[1]!, sourcePath, entryLine);
           index++;
-          while (index < lines.length && indentationOf(lines[index]!) > 4) {
+          while (index < lineCount && indentationOf(lines[index]!) > 4) {
             const fieldRaw = lines[index]!;
             const fieldLine = index + 1;
             const fieldText = yamlText(fieldRaw);
@@ -201,8 +203,9 @@ export const mergeYamlIntoConfig = (
   }
   if (lower === "params.yaml" || lower === "params.yml") {
     const lines = text.replaceAll("\r\n", "\n").replaceAll("\r", "\n").split("\n");
+  const lineCount = lines.length as int32;
     const fields = new Set<string>();
-    for (let index: int32 = 0; index < lines.length; index++) {
+    for (let index: int32 = 0; index < lineCount; index++) {
       const raw = lines[index]!;
       const value = yamlText(raw);
       if (value === "" || value.startsWith("#")) continue;

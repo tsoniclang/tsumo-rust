@@ -6,7 +6,8 @@ function substringError(): void {
 }
 
 const requireSubstringBounds = (source: string, startIndex: int32, length: int32): void => {
-  if (startIndex < 0 || length < 0 || startIndex > source.length || startIndex + length > source.length) {
+  const sourceLength = source.length as int32;
+  if (startIndex < 0 || length < 0 || startIndex > sourceLength || length > sourceLength - startIndex) {
     substringError();
   }
 };
@@ -34,7 +35,7 @@ export const compareText = (left: string, right: string): int32 => {
 };
 
 export const substringFrom = (source: string, startIndex: int32): string => {
-  if (startIndex < 0 || startIndex > source.length) {
+  if (startIndex < 0 || startIndex > (source.length as int32)) {
     substringError();
   }
   return source.substring(startIndex);
@@ -46,7 +47,7 @@ export const substringCount = (source: string, startIndex: int32, length: int32)
 };
 
 export const charAtText = (source: string, index: int32): string => {
-  if (index < 0 || index >= source.length) return "";
+  if (index < 0 || index >= (source.length as int32)) return "";
   return source.charAt(index);
 };
 
@@ -63,9 +64,10 @@ export const nextCodePointIndex = (source: string, index: int32): int32 => {
 };
 
 export const codePointLength = (source: string): int32 => {
+  const sourceLength = source.length as int32;
   let count: int32 = 0;
   let index: int32 = 0;
-  while (index < source.length) {
+  while (index < sourceLength) {
     index = nextCodePointIndex(source, index);
     count++;
   }
@@ -74,9 +76,10 @@ export const codePointLength = (source: string): int32 => {
 
 const nativeIndexAtCodePoint = (source: string, codePointIndex: int32): int32 => {
   if (codePointIndex < 0) substringError();
+  const sourceLength = source.length as int32;
   let currentCodePoint: int32 = 0;
   let nativeIndex: int32 = 0;
-  while (currentCodePoint < codePointIndex && nativeIndex < source.length) {
+  while (currentCodePoint < codePointIndex && nativeIndex < sourceLength) {
     nativeIndex = nextCodePointIndex(source, nativeIndex);
     currentCodePoint++;
   }
@@ -92,8 +95,9 @@ export const substringCodePoints = (source: string, startIndex: int32, length: i
 };
 
 export const trimStartCodePoints = (source: string, cutset: string): string => {
+  const sourceLength = source.length as int32;
   let start: int32 = 0;
-  while (start < source.length) {
+  while (start < sourceLength) {
     const next = nextCodePointIndex(source, start);
     if (!cutset.includes(substringCount(source, start, next - start))) break;
     start = next;
@@ -102,9 +106,10 @@ export const trimStartCodePoints = (source: string, cutset: string): string => {
 };
 
 export const trimEndCodePoints = (source: string, cutset: string): string => {
+  const sourceLength = source.length as int32;
   let index: int32 = 0;
   let end: int32 = 0;
-  while (index < source.length) {
+  while (index < sourceLength) {
     const next = nextCodePointIndex(source, index);
     if (!cutset.includes(substringCount(source, index, next - index))) end = next;
     index = next;
@@ -129,15 +134,16 @@ const isUnicodeSpace = (value: number): boolean =>
   value === 0x3000;
 
 export const trimUnicodeSpace = (source: string): string => {
+  const sourceLength = source.length as int32;
   let start: int32 = 0;
-  while (start < source.length) {
+  while (start < sourceLength) {
     const codePoint = source.codePointAt(start);
     if (codePoint === undefined || !isUnicodeSpace(codePoint)) break;
     start = nextCodePointIndex(source, start);
   }
   let index: int32 = start;
   let end: int32 = start;
-  while (index < source.length) {
+  while (index < sourceLength) {
     const codePoint = source.codePointAt(index);
     const next = nextCodePointIndex(source, index);
     if (codePoint !== undefined && !isUnicodeSpace(codePoint)) end = next;
@@ -148,12 +154,12 @@ export const trimUnicodeSpace = (source: string): string => {
 
 export function zeroPadInteger(value: int32, width: int32): string {
   let result = `${value}`;
-  while (result.length < width) result = `0${result}`;
+  while ((result.length as int32) < width) result = `0${result}`;
   return result;
 }
 
 export const trimStartChar = (source: string, ch: string): string => {
-  if (ch === "" || nextCodePointIndex(ch, 0) !== ch.length) return source;
+  if (ch === "" || nextCodePointIndex(ch, 0) !== (ch.length as int32)) return source;
   let start = 0;
   while (start < source.length && source.startsWith(ch, start)) {
     start += ch.length;
@@ -162,7 +168,7 @@ export const trimStartChar = (source: string, ch: string): string => {
 };
 
 export const trimEndChar = (source: string, ch: string): string => {
-  if (ch === "" || nextCodePointIndex(ch, 0) !== ch.length) return source;
+  if (ch === "" || nextCodePointIndex(ch, 0) !== (ch.length as int32)) return source;
   let end = source.length;
   while (end > 0 && source.endsWith(ch, end)) {
     end -= ch.length;

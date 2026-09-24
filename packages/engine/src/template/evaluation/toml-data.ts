@@ -1,4 +1,4 @@
-import type { int32 } from "@tsonic/core/types.js";
+import type { int32, nativeUint } from "@tsonic/core/types.js";
 import { createTsumoError, TsumoError } from "../../diagnostics.js";
 import { ParamKind, ParamValue } from "../../params.js";
 import { parseStructuredScalar, stripStructuredComment } from "../../utils/structured-scalars.js";
@@ -32,11 +32,12 @@ const scalarToTemplateValue = (value: ParamValue): TemplateValue => {
 };
 
 const statementIsComplete = (text: string): boolean => {
+  const textLength = text.length as int32;
   let squareDepth: int32 = 0;
   let objectDepth: int32 = 0;
   let quote = "";
   let escaped = false;
-  for (let index: int32 = 0; index < text.length; index = nextCodePointIndex(text, index)) {
+  for (let index: int32 = 0; index < textLength; index = nextCodePointIndex(text, index)) {
     const character = text[index]!;
     if (escaped) {
       escaped = false;
@@ -67,10 +68,11 @@ const collectTomlStatements = (
 ): TomlStatement[] => {
   const normalized = text.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
   const lines = normalized.split("\n");
+  const lineCount = lines.length as int32;
   const statements: TomlStatement[] = [];
   let pending = "";
   let pendingLine: int32 = 0;
-  for (let index: int32 = 0; index < lines.length; index++) {
+  for (let index: int32 = 0; index < lineCount; index++) {
     const line = stripStructuredComment(lines[index]!, "toml").trim();
     if (line === "") continue;
     if (pending === "") {
@@ -93,12 +95,13 @@ const splitTomlKey = (
   sourcePath: string | undefined,
   line: int32,
 ): string[] => {
+  const textLength = text.length as int32;
   const segments: string[] = [];
   let start: int32 = 0;
   let quote = "";
   let escaped = false;
-  for (let index: int32 = 0; index <= text.length; index = index === text.length ? index + 1 : nextCodePointIndex(text, index)) {
-    const character = index < text.length ? text[index]! : ".";
+  for (let index: int32 = 0; index <= textLength; index = index === textLength ? index + 1 : nextCodePointIndex(text, index)) {
+    const character = index < textLength ? text[index]! : ".";
     if (escaped) {
       escaped = false;
       continue;
@@ -136,11 +139,12 @@ const assignmentSeparator = (
   sourcePath: string | undefined,
   line: int32,
 ): int32 => {
+  const textLength = text.length as int32;
   let squareDepth: int32 = 0;
   let objectDepth: int32 = 0;
   let quote = "";
   let escaped = false;
-  for (let index: int32 = 0; index < text.length; index = nextCodePointIndex(text, index)) {
+  for (let index: int32 = 0; index < textLength; index = nextCodePointIndex(text, index)) {
     const character = text[index]!;
     if (escaped) {
       escaped = false;
@@ -182,7 +186,7 @@ const ensureDictionaryPath = (
   line: int32,
 ): DictValue => {
   let current = root;
-  for (let index: int32 = 0; index < segments.length; index++) {
+  for (let index: nativeUint = 0; index < segments.length; index++) {
     const segment = segments[index]!;
     const existing = current.value.get(segment);
     if (existing === undefined) {
@@ -204,7 +208,7 @@ const setTomlValue = (
   line: int32,
 ): void => {
   const parentSegments: string[] = [];
-  for (let index: int32 = 0; index < key.length - 1; index++) parentSegments.push(key[index]!);
+  for (let index: nativeUint = 0; index + 1 < key.length; index++) parentSegments.push(key[index]!);
   const parent = ensureDictionaryPath(table, parentSegments, sourcePath, line);
   const name = key[key.length - 1]!;
   if (parent.value.has(name)) {
@@ -215,12 +219,14 @@ const setTomlValue = (
 
 class TomlValueReader {
   text: string;
+  textLength: int32;
   index: int32;
   sourcePath: string | undefined;
   line: int32;
 
   constructor(text: string, sourcePath: string | undefined, line: int32) {
     this.text = text;
+    this.textLength = text.length as int32;
     this.index = 0;
     this.sourcePath = sourcePath;
     this.line = line;
@@ -229,7 +235,7 @@ class TomlValueReader {
   parse(): TemplateValue {
     const value = this.parseValue();
     this.skipWhitespace();
-    if (this.index !== this.text.length) throw this.error("Unexpected trailing TOML value content");
+    if (this.index !== this.textLength) throw this.error("Unexpected trailing TOML value content");
     return value;
   }
 
@@ -245,11 +251,11 @@ class TomlValueReader {
   parseString(): TemplateValue {
     const start = this.index;
     const quote = this.next();
-    if (this.peek() === quote && this.index + 1 < this.text.length && this.text[this.index + 1] === quote) {
+    if (this.peek() === quote && this.index + 1 < this.textLength && this.text[this.index + 1] === quote) {
       throw this.error("Multiline TOML strings are not supported by the data contract");
     }
     let escaped = false;
-    while (this.index < this.text.length) {
+    while (this.index < this.textLength) {
       const character = this.next();
       if (escaped) {
         escaped = false;
@@ -308,7 +314,7 @@ class TomlValueReader {
       const keyStart = this.index;
       let quote = "";
       let escaped = false;
-      while (this.index < this.text.length) {
+      while (this.index < this.textLength) {
         const character = this.peek();
         if (escaped) {
           escaped = false;
@@ -348,7 +354,7 @@ class TomlValueReader {
 
   parseBareScalar(): TemplateValue {
     const start = this.index;
-    while (this.index < this.text.length) {
+    while (this.index < this.textLength) {
       const character = this.peek();
       if (character === "," || character === "]" || character === "}" || /\s/.test(character)) break;
       this.index = nextCodePointIndex(this.text, this.index);
@@ -373,15 +379,15 @@ class TomlValueReader {
   }
 
   skipWhitespace(): void {
-    while (this.index < this.text.length && /\s/.test(this.text[this.index]!)) this.index = nextCodePointIndex(this.text, this.index);
+    while (this.index < this.textLength && /\s/.test(this.text[this.index]!)) this.index = nextCodePointIndex(this.text, this.index);
   }
 
   peek(): string {
-    return this.index < this.text.length ? this.text[this.index]! : "";
+    return this.index < this.textLength ? this.text[this.index]! : "";
   }
 
   next(): string {
-    if (this.index >= this.text.length) throw this.error("Unexpected end of TOML value");
+    if (this.index >= this.textLength) throw this.error("Unexpected end of TOML value");
     const character = this.text[this.index]!;
     this.index = nextCodePointIndex(this.text, this.index);
     return character;
@@ -404,14 +410,14 @@ export const parseTomlTemplateData = (
   let currentTable = root;
   const declaredTables = new Set<string>();
   const statements = collectTomlStatements(text, sourcePath);
-  for (let index: int32 = 0; index < statements.length; index++) {
+  for (let index: nativeUint = 0; index < statements.length; index++) {
     const statement = statements[index]!;
     const raw = statement.text.trim();
     if (raw.startsWith("[[") && raw.endsWith("]]")) {
       const path = splitTomlKey(raw.slice(2, raw.length - 2).trim(), sourcePath, statement.line);
       if (path.length === 0) throw tomlError("TOML array table name cannot be empty", sourcePath, statement.line);
       const parentSegments: string[] = [];
-      for (let pathIndex: int32 = 0; pathIndex < path.length - 1; pathIndex++) {
+      for (let pathIndex: nativeUint = 0; pathIndex + 1 < path.length; pathIndex++) {
         parentSegments.push(path[pathIndex]!);
       }
       const parent = ensureDictionaryPath(root, parentSegments, sourcePath, statement.line);

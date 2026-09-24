@@ -1,4 +1,4 @@
-import type { int32 } from "@tsonic/core/types.js";
+import type { nativeUint } from "@tsonic/core/types.js";
 import { normalizeResourceRelativePath } from "./paths.js";
 
 const resourceSegmentMatches = (pattern: string, segment: string): boolean => {
@@ -22,14 +22,14 @@ const resourceSegmentMatches = (pattern: string, segment: string): boolean => {
   if (star < 0) return pattern === segment;
 
   const parts = pattern.split("*");
-  let position = 0;
+  let position: nativeUint = 0;
   for (let index = 0; index < parts.length; index++) {
     const part = parts[index]!;
     if (part === "") continue;
     const found = segment.indexOf(part, position);
     if (found < 0) return false;
     if (index === 0 && !pattern.startsWith("*") && found !== 0) return false;
-    position = found + part.length;
+    position = (found as nativeUint) + part.length;
   }
   return pattern.endsWith("*") || position === segment.length;
 };
@@ -43,8 +43,8 @@ const splitGlobSegments = (value: string): string[] => {
 const resourceGlobMatchesAt = (
   patternSegments: string[],
   pathSegments: string[],
-  patternIndex: int32,
-  pathIndex: int32,
+  patternIndex: nativeUint,
+  pathIndex: nativeUint,
 ): boolean => {
   if (patternIndex >= patternSegments.length) return pathIndex >= pathSegments.length;
   const pattern = patternSegments[patternIndex]!;

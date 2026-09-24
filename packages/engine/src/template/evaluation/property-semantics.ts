@@ -141,7 +141,7 @@ export const resolvePath = (value: TemplateValue, segments: string[], scope: Ren
               break;
             }
           }
-          if (foundIdx >= 0 && foundIdx < siblings.length - 1) {
+          if (foundIdx >= 0 && foundIdx < (siblings.length as int32) - 1) {
             const nextIdx: int32 = foundIdx + 1;
             cur = new PageValue(siblings[nextIdx]!);
           } else {

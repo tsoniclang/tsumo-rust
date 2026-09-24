@@ -100,8 +100,9 @@ export const formatDateTime = (value: string, layout: string): string | undefine
   const weekday = weekdayIndex(milliseconds);
   const output = new TextBuilder();
 
+  const layoutLength = layout.length as int32;
   let index: int32 = 0;
-  while (index < layout.length) {
+  while (index < layoutLength) {
     const remaining = layout.slice(index);
     if (remaining.startsWith("Monday")) {
       output.append(longWeekdays[weekday]!);

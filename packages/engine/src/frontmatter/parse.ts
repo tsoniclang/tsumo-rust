@@ -12,11 +12,12 @@ const tryParseJsonFrontMatter = (text: string, sourcePath?: string): ParsedConte
   const start: int32 = 0;
   if (text.length === 0 || text[start] !== "{") return undefined;
 
+  const textLength = text.length as int32;
   let depth: int32 = 0;
   let inString = false;
   let escaped = false;
   let end: int32 = -1;
-  for (let index: int32 = start; index < text.length; index = nextCodePointIndex(text, index)) {
+  for (let index: int32 = start; index < textLength; index = nextCodePointIndex(text, index)) {
     const current = text[index]!;
     if (inString && escaped) {
       escaped = false;
@@ -62,8 +63,9 @@ const parseDelimitedFrontMatter = (
   sourcePath: string | undefined,
 ): ParsedContent => {
   const frontMatterLines: string[] = [];
-  let bodyStart: int32 = lines.length;
-  for (let index: int32 = 1; index < lines.length; index++) {
+  const lineCount = lines.length as int32;
+  let bodyStart: int32 = lineCount;
+  for (let index: int32 = 1; index < lineCount; index++) {
     if (lines[index]!.trim() === delimiter) {
       bodyStart = index + 1;
       const body = lines.slice(bodyStart).join("\n").trimStart();

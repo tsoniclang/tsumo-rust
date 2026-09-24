@@ -1,16 +1,16 @@
 import { Buffer } from "node:buffer";
-import type { int32 } from "@tsonic/core/types.js";
+import type { int32, nativeUint } from "@tsonic/core/types.js";
 import { createTsumoError } from "../diagnostics.js";
 import { Resource } from "./models.js";
 
-function byteInRange(bytes: Buffer, index: int32, minimum: int32, maximum: int32): boolean {
+function byteInRange(bytes: Buffer, index: nativeUint, minimum: int32, maximum: int32): boolean {
   if (index >= bytes.length) return false;
   const byte: int32 = bytes.readUInt8(index);
   return byte >= minimum && byte <= maximum;
 }
 
 export function isValidUtf8(bytes: Buffer): boolean {
-  let index: int32 = 0;
+  let index: nativeUint = 0;
   while (index < bytes.length) {
     const first: int32 = bytes.readUInt8(index);
     if (first <= 0x7f) {

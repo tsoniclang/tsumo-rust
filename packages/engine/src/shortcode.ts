@@ -1,4 +1,4 @@
-import type { int32 } from "@tsonic/core/types.js";
+import type { int32, nativeUint } from "@tsonic/core/types.js";
 import { createTsumoError } from "./diagnostics.js";
 import { codePointAtText, indexOfText, indexOfTextFrom, nextCodePointIndex, substringCount, substringFrom } from "./utils/strings.js";
 import { ParamValue } from "./params.js";
@@ -48,10 +48,12 @@ export class ShortcodeCall {
 
 class ParseState {
   text: string;
+  textLength: int32;
   pos: int32;
 
   constructor(text: string) {
     this.text = text;
+    this.textLength = text.length as int32;
     this.pos = 0;
   }
 
@@ -63,7 +65,7 @@ class ParseState {
 
   peekString(length: int32): string {
     let end = this.pos;
-    for (let step: int32 = 0; step < length && end < this.text.length; step++) end = nextCodePointIndex(this.text, end);
+    for (let step: int32 = 0; step < length && end < this.textLength; step++) end = nextCodePointIndex(this.text, end);
     return substringCount(this.text, this.pos, end - this.pos);
   }
 
@@ -72,7 +74,7 @@ class ParseState {
   }
 
   atEnd(): boolean {
-    return this.pos >= this.text.length;
+    return this.pos >= this.textLength;
   }
 
   skipWhitespace(): void {
@@ -111,11 +113,12 @@ class ShortcodeSourceMap {
   utf16Adjustments: int32[];
 
   constructor(text: string) {
+    const textLength = text.length as int32;
     this.lineStarts = [0];
     this.wideCharacterEnds = [];
     this.utf16Adjustments = [];
     let adjustment: int32 = 0;
-    for (let index: int32 = 0; index < text.length; index = nextCodePointIndex(text, index)) {
+    for (let index: int32 = 0; index < textLength; index = nextCodePointIndex(text, index)) {
       const current = text.codePointAt(index)!;
       const next = nextCodePointIndex(text, index);
       if (next - index > 1) {
@@ -124,7 +127,7 @@ class ShortcodeSourceMap {
         this.utf16Adjustments.push(adjustment);
       }
       if (current === 13) {
-        if (index + 1 < text.length && text[index + 1] === "\n") index++;
+        if (index + 1 < textLength && text[index + 1] === "\n") index++;
         this.lineStarts.push(index + 1);
       } else if (current === 10) {
         this.lineStarts.push(index + 1);
@@ -136,22 +139,22 @@ class ShortcodeSourceMap {
     let fenceCharacter = "";
     let fenceLength: int32 = 0;
     let position: int32 = 0;
-    while (position < text.length) {
+    while (position < textLength) {
       const current = text[position]!;
       if (fenceStart < 0 && (current === "`" || current === "~")) {
         let length: int32 = 1;
-        while (position + length < text.length && text[position + length] === current) length++;
+        while (position + length < textLength && text[position + length] === current) length++;
         if (length >= 3) {
           fenceStart = position;
           fenceCharacter = current;
           fenceLength = length;
           position += length;
-          while (position < text.length && text[position] !== "\n") position = nextCodePointIndex(text, position);
+          while (position < textLength && text[position] !== "\n") position = nextCodePointIndex(text, position);
           continue;
         }
       } else if (fenceStart >= 0 && current === fenceCharacter) {
         let length: int32 = 1;
-        while (position + length < text.length && text[position + length] === current) length++;
+        while (position + length < textLength && text[position + length] === current) length++;
         if (length >= fenceLength) {
           this.codeFences.push(new ShortcodeRange(fenceStart, position + length));
           fenceStart = -1;
@@ -163,12 +166,12 @@ class ShortcodeSourceMap {
       }
       position = nextCodePointIndex(text, position);
     }
-    if (fenceStart >= 0) this.codeFences.push(new ShortcodeRange(fenceStart, text.length));
+    if (fenceStart >= 0) this.codeFences.push(new ShortcodeRange(fenceStart, textLength));
   }
 
   positionAt(offset: int32): ShortcodePosition {
     let low: int32 = 0;
-    let high: int32 = this.lineStarts.length - 1;
+    let high: int32 = (this.lineStarts.length as int32) - 1;
     while (low <= high) {
       const middle = (low + Math.floor((high - low) / 2)) as int32;
       if (this.lineStarts[middle]! <= offset) low = middle + 1;
@@ -180,7 +183,7 @@ class ShortcodeSourceMap {
 
   utf16OffsetAt(offset: int32): int32 {
     let low: int32 = 0;
-    let high: int32 = this.wideCharacterEnds.length;
+    let high: int32 = this.wideCharacterEnds.length as int32;
     while (low < high) {
       const middle = (low + Math.floor((high - low) / 2)) as int32;
       if (this.wideCharacterEnds[middle]! <= offset) low = middle + 1;
@@ -191,7 +194,7 @@ class ShortcodeSourceMap {
 
   isInCodeBlock(offset: int32): boolean {
     let low: int32 = 0;
-    let high: int32 = this.codeFences.length - 1;
+    let high: int32 = (this.codeFences.length as int32) - 1;
     while (low <= high) {
       const middle = (low + Math.floor((high - low) / 2)) as int32;
       const range = this.codeFences[middle]!;
@@ -330,15 +333,16 @@ const findClosingTag = (text: string, name: string, startPos: int32, isMarkdown:
   const closeTagPrefix = isMarkdown ? `{{% /${name}` : `{{< /${name}`;
   const closeTagPrefix2 = isMarkdown ? `{{% / ${name}` : `{{< / ${name}`;
 
+  const textLength = text.length as int32;
   let depth: int32 = 1;
   let pos = startPos;
   const innerStart = startPos;
 
-  while (pos < text.length) {
+  while (pos < textLength) {
     const remaining = substringFrom(text, pos);
 
     if (remaining.startsWith(openTag)) {
-      const afterOpen = substringFrom(text, pos + openTag.length).trimStart();
+      const afterOpen = substringFrom(text, pos + (openTag.length as int32)).trimStart();
       if (afterOpen.startsWith(name + " ") || afterOpen.startsWith(name + ">") || afterOpen.startsWith(name + "%")) {
         depth++;
       }
@@ -351,7 +355,7 @@ const findClosingTag = (text: string, name: string, startPos: int32, isMarkdown:
         const endSuffix = isMarkdown ? "%}}" : ">}}";
         const closeEnd = indexOfTextFrom(text, endSuffix, pos);
         if (closeEnd < 0) return undefined;
-        return { inner, endPos: closeEnd + endSuffix.length };
+        return { inner, endPos: closeEnd + (endSuffix.length as int32) };
       }
     }
 
@@ -364,10 +368,11 @@ const findClosingTag = (text: string, name: string, startPos: int32, isMarkdown:
 export const parseShortcodes = (text: string, sourcePath?: string): ShortcodeCall[] => {
   const results: ShortcodeCall[] = [];
   if (!text.includes("{{<") && !text.includes("{{%")) return results;
+  const textLength = text.length as int32;
   const sourceMap = new ShortcodeSourceMap(text);
   let pos: int32 = 0;
 
-  while (pos < text.length) {
+  while (pos < textLength) {
     const openAngle = indexOfTextFrom(text, "{{<", pos);
     const openPercent = indexOfTextFrom(text, "{{%", pos);
 
@@ -408,7 +413,7 @@ export const parseShortcodes = (text: string, sourcePath?: string): ShortcodeCal
       : content;
 
     if (tagContent.startsWith("/*")) {
-      pos = closePos + closeSuffix.length;
+      pos = closePos + (closeSuffix.length as int32);
       continue;
     }
 
@@ -421,7 +426,7 @@ export const parseShortcodes = (text: string, sourcePath?: string): ShortcodeCal
         const position = sourceMap.positionAt(openPos);
         throw createTsumoError("TSUMO_SHORTCODE_CLOSE_UNEXPECTED", `Unexpected shortcode closing action '${name}'`, sourcePath, position.line, position.column);
       }
-      pos = closePos + closeSuffix.length;
+      pos = closePos + (closeSuffix.length as int32);
       continue;
     }
 
@@ -438,17 +443,17 @@ export const parseShortcodes = (text: string, sourcePath?: string): ShortcodeCal
         isMarkdown,
         true,
         openPos,
-        closePos + closeSuffix.length,
+        closePos + (closeSuffix.length as int32),
         sourcePath,
         position.line,
         position.column,
       );
       results.push(call);
-      pos = closePos + closeSuffix.length;
+      pos = closePos + (closeSuffix.length as int32);
       continue;
     }
 
-    const tagEndPos = closePos + closeSuffix.length;
+    const tagEndPos = closePos + (closeSuffix.length as int32);
     const closeResult = findClosingTag(text, name, tagEndPos, isMarkdown);
 
     if (closeResult !== undefined) {
@@ -494,9 +499,9 @@ export const parseShortcodes = (text: string, sourcePath?: string): ShortcodeCal
 export const collectShortcodeNames = (text: string, sourcePath?: string): Map<string, boolean> => {
   const names = new Map<string, boolean>();
   const pending: string[] = [text];
-  for (let pendingIndex: int32 = 0; pendingIndex < pending.length; pendingIndex++) {
+  for (let pendingIndex: nativeUint = 0; pendingIndex < pending.length; pendingIndex++) {
     const calls = parseShortcodes(pending[pendingIndex]!, sourcePath);
-    for (let callIndex: int32 = 0; callIndex < calls.length; callIndex++) {
+    for (let callIndex: nativeUint = 0; callIndex < calls.length; callIndex++) {
       const call = calls[callIndex]!;
       names.set(call.name, true);
       if (call.inner !== "") pending.push(call.inner);
@@ -509,12 +514,14 @@ export const innerDeindent = (inner: string): string => {
   const lines = inner.split("\n");
   if (lines.length === 0) return inner;
 
+  const lineCount = lines.length as int32;
   let minIndent: int32 = -1;
-  for (let i: int32 = 0; i < lines.length; i++) {
+  for (let i: int32 = 0; i < lineCount; i++) {
     const line = lines[i]!;
+    const lineLength = line.length as int32;
     if (line.trim() === "") continue;
     let indent: int32 = 0;
-    for (let j: int32 = 0; j < line.length; j++) {
+    for (let j: int32 = 0; j < lineLength; j++) {
       const c = codePointAtText(line, j);
       if (c === " ") indent++;
       else if (c === "\t") indent += 4;
@@ -526,15 +533,16 @@ export const innerDeindent = (inner: string): string => {
   if (minIndent <= 0) return inner;
 
   const result: string[] = [];
-  for (let i: int32 = 0; i < lines.length; i++) {
+  for (let i: int32 = 0; i < lineCount; i++) {
     const line = lines[i]!;
+    const lineLength = line.length as int32;
     if (line.trim() === "") {
       result.push(line);
       continue;
     }
     let removed: int32 = 0;
     let startIdx: int32 = 0;
-    for (let j: int32 = 0; j < line.length && removed < minIndent; j++) {
+    for (let j: int32 = 0; j < lineLength && removed < minIndent; j++) {
       const c = codePointAtText(line, j);
       if (c === " ") {
         removed++;
@@ -551,7 +559,7 @@ export const innerDeindent = (inner: string): string => {
 
   const arr = result;
   let out = "";
-  for (let i: int32 = 0; i < arr.length; i++) {
+  for (let i: int32 = 0; i < (arr.length as int32); i++) {
     if (i > 0) out += "\n";
     out += arr[i]!;
   }

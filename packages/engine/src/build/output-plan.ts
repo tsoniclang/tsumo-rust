@@ -4,7 +4,7 @@ import { createTsumoError } from "../diagnostics.js";
 import { ensureDir, listFilesRecursive, writeTextFile } from "../fs.js";
 import { pathContainsOrEquals } from "../utils/paths.js";
 import { compareSitePaths, joinSitePath, normalizeSitePath, splitSitePath } from "./site-routes.js";
-import type { int32 } from "@tsonic/core/types.js";
+import type { int32, nativeUint } from "@tsonic/core/types.js";
 
 type AssetLayer = "theme-static" | "site-static" | "bundle" | "docs-asset";
 
@@ -139,7 +139,7 @@ export class SiteOutputPlan {
         }
         const first = content.indexOf(token);
         if (first >= 0) {
-          if (resolvedPlacements.has(token) || content.indexOf(token, first + token.length) >= 0) {
+          if (resolvedPlacements.has(token) || content.indexOf(token, (first as nativeUint) + token.length) >= 0) {
             throw createTsumoError(
               "TSUMO_TEMPLATE_DEFER_PLACEMENT_INVALID",
               "Each deferred-template placement must occur exactly once in planned output",

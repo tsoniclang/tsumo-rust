@@ -104,6 +104,7 @@ const menuBuildersToEntries = (builders: Map<string, MenuEntryBuilder[]>): Map<s
 export const parseModuleToml = (text: string, sourcePath?: string): ModuleMount[] => {
   const mounts: ModuleMount[] = [];
   const lines = replaceLineEndings(text, "\n").split("\n");
+  const lineCount = lines.length as int32;
   let source = "";
   let target = "";
   let inMount = false;
@@ -114,7 +115,7 @@ export const parseModuleToml = (text: string, sourcePath?: string): ModuleMount[
     mounts.push(new ModuleMount(source, target));
   };
 
-  for (let index: int32 = 0; index < lines.length; index++) {
+  for (let index: int32 = 0; index < lineCount; index++) {
     const lineNumber = index + 1;
     const line = stripStructuredComment(lines[index]!, "toml").trim();
     if (line === "") continue;
@@ -134,7 +135,7 @@ export const parseModuleToml = (text: string, sourcePath?: string): ModuleMount[
     else if (key === "target") target = parseConfigString(assignment[0]!, assignment[1]!, "toml", sourcePath, lineNumber);
     else throw createTsumoError("TSUMO_CONFIG_UNKNOWN_FIELD", `Unknown module mount field '${assignment[0]}'`, sourcePath, lineNumber, 1);
   }
-  finishMount(lines.length);
+  finishMount(lineCount);
   return mounts;
 };
 
@@ -143,6 +144,7 @@ export const parseTomlConfig = (text: string, sourcePath?: string): SiteConfig =
   const languages = new Map<string, LanguageConfigBuilder>();
   const menuBuilders = new Map<string, MenuEntryBuilder[]>();
   const lines = replaceLineEndings(text, "\n").split("\n");
+  const lineCount = lines.length as int32;
   let table = "";
   let currentMenu: MenuEntryBuilder | undefined;
   let hasLanguageCode = false;
@@ -151,7 +153,7 @@ export const parseTomlConfig = (text: string, sourcePath?: string): SiteConfig =
   let tableFields = new Set<string>();
   let menuFields = new Set<string>();
 
-  for (let index: int32 = 0; index < lines.length; index++) {
+  for (let index: int32 = 0; index < lineCount; index++) {
     const lineNumber = index + 1;
     const line = stripStructuredComment(lines[index]!, "toml").trim();
     if (line === "") continue;
@@ -232,11 +234,12 @@ export const mergeTomlIntoConfig = (
   }
 
   const lines = replaceLineEndings(text, "\n").split("\n");
+  const lineCount = lines.length as int32;
   if (lower === "params.toml") {
     let prefix = "";
     const fields = new Set<string>();
     const tables = new Set<string>();
-    for (let index: int32 = 0; index < lines.length; index++) {
+    for (let index: int32 = 0; index < lineCount; index++) {
       const lineNumber = index + 1;
       const line = stripStructuredComment(lines[index]!, "toml").trim();
       if (line === "") continue;
@@ -269,7 +272,7 @@ export const mergeTomlIntoConfig = (
     const tables = new Set<string>();
     let current = "";
     if (!aggregate) current = substringCount(lower, "languages.".length, lower.length - "languages.".length - ".toml".length);
-    for (let index: int32 = 0; index < lines.length; index++) {
+    for (let index: int32 = 0; index < lineCount; index++) {
       const lineNumber = index + 1;
       const line = stripStructuredComment(lines[index]!, "toml").trim();
       if (line === "") continue;
@@ -315,7 +318,7 @@ export const mergeTomlIntoConfig = (
     const builders: MenuEntryBuilder[] = [];
     let current: MenuEntryBuilder | undefined;
     let fields = new Set<string>();
-    for (let index: int32 = 0; index < lines.length; index++) {
+    for (let index: int32 = 0; index < lineCount; index++) {
       const lineNumber = index + 1;
       const line = stripStructuredComment(lines[index]!, "toml").trim();
       if (line === "") continue;

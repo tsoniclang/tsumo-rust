@@ -1,4 +1,4 @@
-import type { int32 } from "@tsonic/core/types.js";
+import type { nativeUint } from "@tsonic/core/types.js";
 import { PageContext, SiteContext } from "../../models.js";
 import { replaceText } from "../../utils/strings.js";
 import { trimEndCharacter, trimSlashes, trimStartCharacter } from "./serialization.js";
@@ -28,14 +28,14 @@ export const segmentMatch = (pattern: string, segment: string): boolean => {
   if (star < 0) return pattern === segment;
 
   const parts = pattern.split("*");
-  let pos = 0;
+  let pos: nativeUint = 0;
   for (let i = 0; i < parts.length; i++) {
     const p = parts[i]!;
     if (p === "") continue;
     const idx = segment.indexOf(p, pos);
     if (idx < 0) return false;
     if (i === 0 && !pattern.startsWith("*") && idx !== 0) return false;
-    pos = idx + p.length;
+    pos = (idx as nativeUint) + p.length;
   }
   if (!pattern.endsWith("*") && pos !== segment.length) return false;
   return true;
@@ -51,7 +51,7 @@ export const splitGlobSegments = (raw: string): string[] => {
   return normalized.split("/");
 };
 
-export const globMatchAt = (patSegs: string[], pathSegs: string[], pi: int32, si: int32): boolean => {
+export const globMatchAt = (patSegs: string[], pathSegs: string[], pi: nativeUint, si: nativeUint): boolean => {
   if (pi >= patSegs.length) return si >= pathSegs.length;
   const p = patSegs[pi]!;
   if (p === "**") {

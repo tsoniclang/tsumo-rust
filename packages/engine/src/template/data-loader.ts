@@ -1,5 +1,5 @@
 import { extname, isAbsolute, join, relative } from "node:path";
-import type { int32 } from "@tsonic/core/types.js";
+import type { nativeUint } from "@tsonic/core/types.js";
 import { createTsumoError } from "../diagnostics.js";
 import { dirExists, listFilesRecursive, readTextFile } from "../fs.js";
 import type { ModuleMount } from "../models.js";
@@ -37,7 +37,7 @@ const collectDataLayer = (
   if (!dirExists(root)) return;
   const files = listFilesRecursive(root, "*");
   const layer = new Map<string, SelectedDataFile>();
-  for (let index: int32 = 0; index < files.length; index++) {
+  for (let index: nativeUint = 0; index < files.length; index++) {
     const sourcePath = files[index]!;
     const format = dataFormat(sourcePath);
     if (format === undefined) continue;
@@ -65,7 +65,7 @@ const setDataPath = (
 ): void => {
   const segments = semanticPath.split("/");
   let current = root;
-  for (let index: int32 = 0; index < segments.length - 1; index++) {
+  for (let index: nativeUint = 0; index < segments.length - 1; index++) {
     const segment = segments[index]!;
     const existing = current.value.get(segment);
     if (existing === undefined) {
@@ -103,8 +103,8 @@ export const loadSiteData = (
   if (themeDir !== undefined) collectDataLayer(join(themeDir as string, "data"), selected);
 
   if (mounts !== undefined) {
-    for (let index: int32 = mounts.length - 1; index >= 0; index--) {
-      const mount = mounts[index]!;
+    for (let index = mounts.length; index > 0; index--) {
+      const mount = mounts[index - 1]!;
       const target = trimEndChar(trimStartChar(normalizeDataPath(mount.target), "/"), "/");
       if (target !== "data") continue;
       const root = isAbsolute(mount.source) ? mount.source : join(siteDir, mount.source);
@@ -116,7 +116,7 @@ export const loadSiteData = (
   const identities = Array.from(selected.keys());
   identities.sort();
   const root = new DictValue(new Map<string, TemplateValue>());
-  for (let index: int32 = 0; index < identities.length; index++) {
+  for (let index: nativeUint = 0; index < identities.length; index++) {
     const identity = identities[index]!;
     const file = selected.get(identity);
     if (file === undefined) {

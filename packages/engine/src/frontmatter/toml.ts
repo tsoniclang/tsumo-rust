@@ -41,6 +41,7 @@ const applyMenuProperty = (
 
 export const parseTomlFrontMatter = (lines: string[], sourcePath?: string): FrontMatter => {
   const frontMatter = new FrontMatter();
+  const lineCount = lines.length as int32;
   let table = "";
   let menuEntry: FrontMatterMenu | undefined;
   const rootFields = new Set<string>();
@@ -49,7 +50,7 @@ export const parseTomlFrontMatter = (lines: string[], sourcePath?: string): Fron
   let tableFields = new Set<string>();
   let menuFields = new Set<string>();
 
-  for (let index: int32 = 0; index < lines.length; index++) {
+  for (let index: int32 = 0; index < lineCount; index++) {
     const lineNumber = index + 2;
     const line = stripStructuredComment(lines[index]!, "toml").trim();
     if (line === "") continue;

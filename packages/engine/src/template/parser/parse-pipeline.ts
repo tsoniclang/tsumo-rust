@@ -1,11 +1,11 @@
-import type { int32 } from "@tsonic/core/types.js";
+import type { int32, nativeUint } from "@tsonic/core/types.js";
 import { createTsumoError } from "../../diagnostics.js";
 import { substringFrom } from "../../utils/strings.js";
 import { AccessExpr, Command, CommandExpr, Expr, Pipeline, PipelineExpr, TokenExpr } from "../syntax/expressions.js";
 
 class PipelineParser {
   tokens: string[];
-  index: int32;
+  index: nativeUint;
   sourcePath: string | undefined;
   line: int32 | undefined;
   column: int32 | undefined;
