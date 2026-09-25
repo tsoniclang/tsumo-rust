@@ -1,4 +1,4 @@
-import type { int32 } from "@tsonic/core/types.js";
+import type { nativeUint } from "@tsonic/core/types.js";
 import { TextBuilderState } from "@tsonic/rust/crates/tsumo_platform/index.js";
 
 export class TextBuilder {
@@ -8,7 +8,7 @@ export class TextBuilder {
     this.#state = new TextBuilderState();
   }
 
-  get length(): int32 {
+  get length(): nativeUint {
     return this.#state.length();
   }
 

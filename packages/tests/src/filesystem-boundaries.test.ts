@@ -3,6 +3,7 @@ import { join } from "node:path";
 import {
   TsumoDiagnostic,
   TsumoError,
+  WatchEntryState,
   createWatchSnapshot,
   listDirectoriesTopDirectory,
   listFilesRecursive,
@@ -30,6 +31,19 @@ const captureTsumoDiagnostic = (operation: () => void): TsumoDiagnostic => {
 };
 
 export class FilesystemBoundaryTests {
+  watch_snapshot_sizes_preserve_adjacent_native_integers(): void {
+    const first = new Map<string, WatchEntryState>();
+    const same = new Map<string, WatchEntryState>();
+    const next = new Map<string, WatchEntryState>();
+    first.set("large", new WatchEntryState(123.5, 9007199254740992n));
+    same.set("large", new WatchEntryState(123.5, 9007199254740992n));
+    next.set("large", new WatchEntryState(123.5, 9007199254740993n));
+    Assert.True(watchSnapshotsEqual(first, same));
+    Assert.False(watchSnapshotsEqual(first, next));
+    same.set("large", new WatchEntryState(123.75, 9007199254740992n));
+    Assert.False(watchSnapshotsEqual(first, same));
+  }
+
   recursive_discovery_is_sorted_and_rejects_links(): void {
     const root = createTestDirectory("filesystem-discovery");
     try {
@@ -92,6 +106,9 @@ export class FilesystemBoundaryTests {
 
 export const runFilesystemBoundaryTests = (): void => {
   const tests = new FilesystemBoundaryTests();
+  runTest("watch snapshot sizes preserve adjacent native integers", () => {
+    tests.watch_snapshot_sizes_preserve_adjacent_native_integers();
+  });
   runTest("recursive discovery is sorted and rejects links", () => {
     tests.recursive_discovery_is_sorted_and_rejects_links();
   });

@@ -3,6 +3,27 @@ import { Assert, runTest } from "./test-root.js";
 import { captureDiagnosticCode, render } from "./template-test-harness.js";
 
 export class TemplateControlFlowTests {
+  range_bindings_preserve_values_keys_order_and_early_exit(): void {
+    Assert.StringEqual(
+      "ab|ab|0:a;1:b;",
+      render(
+        '{{ range slice "a" "b" }}{{ . }}{{ end }}|' +
+        '{{ range $value := slice "a" "b" }}{{ $value }}{{ end }}|' +
+        '{{ range $key, $value := slice "a" "b" }}{{ $key }}:{{ $value }};{{ end }}',
+      ),
+    );
+    Assert.StringEqual(
+      "12|12|a:1;b:2;|0:a|empty",
+      render(
+        '{{ range dict "b" 2 "a" 1 }}{{ . }}{{ end }}|' +
+        '{{ range $value := dict "b" 2 "a" 1 }}{{ $value }}{{ end }}|' +
+        '{{ range $key, $value := dict "b" 2 "a" 1 }}{{ $key }}:{{ $value }};{{ end }}|' +
+        '{{ range $key, $value := slice "a" "b" }}{{ $key }}:{{ $value }}{{ break }}{{ end }}|' +
+        '{{ range $key, $value := slice }}unused{{ else }}empty{{ end }}',
+      ),
+    );
+  }
+
   range_break_and_continue_target_the_innermost_active_range(): void {
     Assert.StringEqual(
       "134",
@@ -57,6 +78,9 @@ export class TemplateControlFlowTests {
 
 export const runTemplateControlFlowTests = (): void => {
   const tests = new TemplateControlFlowTests();
+  runTest("range bindings preserve values keys order and early exit", () => {
+    tests.range_bindings_preserve_values_keys_order_and_early_exit();
+  });
   runTest("range break and continue target the innermost active range", () => {
     tests.range_break_and_continue_target_the_innermost_active_range();
   });

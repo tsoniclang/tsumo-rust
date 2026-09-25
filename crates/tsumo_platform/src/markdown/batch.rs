@@ -1,11 +1,10 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use tsonic_rust_js::string as js_string;
 use tsonic_rust_runtime::TsonicResult;
 
-use super::checked_index;
 use super::document::MarkdownDocument;
+use super::{checked_count, checked_index};
 use crate::platform_error;
 
 struct MarkdownRenderRequest {
@@ -54,8 +53,7 @@ impl MarkdownBatch {
                 "markdown requests cannot be added after rendering begins",
             ));
         }
-        let index = i32::try_from(state.requests.len())
-            .map_err(|_| platform_error("markdown batch exceeds the supported request count"))?;
+        let index = checked_count(state.requests.len())?;
         state.requests.push(MarkdownRenderRequest {
             source: source.to_owned(),
         });
@@ -108,46 +106,42 @@ fn bounded_worker_count(request_count: usize) -> usize {
         .min(useful_workers)
 }
 
-pub fn create_markdown_source_plan(source: &str) -> TsonicResult<MarkdownSourcePlan> {
+pub fn create_markdown_source_plan(source: &str) -> MarkdownSourcePlan {
     const SUMMARY_MARKER: &str = "<!--more-->";
-    const SUMMARY_MARKER_LENGTH: i32 = 11;
 
     let markdown = source.replace("\r\n", "\n").replace('\r', "\n");
-    let lowered = js_string::to_lower_case(&markdown);
-    let marker_index = js_string::index_of(&lowered, SUMMARY_MARKER, 0.0);
-    if marker_index >= 0 {
-        let marker_index = i32::try_from(marker_index)
-            .map_err(|_| platform_error("markdown summary marker exceeds the supported range"))?;
-        let marker_end = marker_index
-            .checked_add(SUMMARY_MARKER_LENGTH)
-            .ok_or_else(|| platform_error("markdown summary marker exceeds the supported range"))?;
-        let before = js_string::substring(&markdown, 0.0, f64::from(marker_index))?;
-        let after = js_string::substring_from(&markdown, f64::from(marker_end))?;
-        return Ok(MarkdownSourcePlan {
+    let marker_index = markdown
+        .as_bytes()
+        .windows(SUMMARY_MARKER.len())
+        .position(|candidate| candidate.eq_ignore_ascii_case(SUMMARY_MARKER.as_bytes()));
+    if let Some(marker_index) = marker_index {
+        let before = &markdown[..marker_index];
+        let after = &markdown[marker_index + SUMMARY_MARKER.len()..];
+        let mut full_source = String::with_capacity(before.len() + after.len());
+        full_source.push_str(before);
+        full_source.push_str(after);
+        let summary_source = before.to_owned();
+        return MarkdownSourcePlan {
             toc_source: markdown,
-            full_source: before.clone() + &after,
-            summary_source: before,
-        });
+            full_source,
+            summary_source,
+        };
     }
 
-    let trimmed = js_string::trim(&markdown);
-    let first_break = js_string::index_of(&trimmed, "\n\n", 0.0);
-    let summary_source = if first_break >= 0 {
-        let first_break = i32::try_from(first_break)
-            .map_err(|_| platform_error("markdown summary exceeds the supported range"))?;
-        js_string::substring(&trimmed, 0.0, f64::from(first_break))?
-    } else {
-        trimmed
-    };
-    Ok(MarkdownSourcePlan {
+    let trimmed = markdown.trim();
+    let summary_source = trimmed
+        .split_once("\n\n")
+        .map_or(trimmed, |(first, _)| first)
+        .to_owned();
+    MarkdownSourcePlan {
         toc_source: markdown.clone(),
         full_source: markdown,
         summary_source,
-    })
+    }
 }
 
 fn render_markdown_request(request: &MarkdownRenderRequest) -> TsonicResult<MarkdownBatchResult> {
-    let plan = create_markdown_source_plan(&request.source)?;
+    let plan = create_markdown_source_plan(&request.source);
     let full_document = MarkdownDocument::new(&plan.full_source);
     let html = full_document.render();
     let plain_text = full_document.plain_text();
@@ -243,6 +237,27 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn source_plans_use_original_utf8_offsets_and_native_slices() {
+        for marker in ["<!--more-->", "<!--MORE-->", "<!--MoRe-->"] {
+            let source = format!("İ😀\r\n{marker}\r尾");
+            let plan = create_markdown_source_plan(&source);
+            assert_eq!(plan.summary_source, "İ😀\n");
+            assert_eq!(plan.full_source, "İ😀\n\n尾");
+            assert_eq!(plan.toc_source, format!("İ😀\n{marker}\n尾"));
+        }
+        assert_eq!(
+            create_markdown_source_plan("  😀\n\n尾  ").summary_source,
+            "😀"
+        );
+        assert_eq!(
+            create_markdown_source_plan("<!--more-->尾").summary_source,
+            ""
+        );
+        assert_eq!(create_markdown_source_plan("\r\n ").full_source, "\n ");
+        assert_eq!(create_markdown_source_plan("\r\n ").summary_source, "");
+    }
 
     #[test]
     fn markdown_batch_preserves_request_order_and_exact_products() {
