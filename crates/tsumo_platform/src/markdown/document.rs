@@ -5,11 +5,11 @@ use std::rc::Rc;
 use pulldown_cmark::Event;
 use tsonic_rust_runtime::TsonicResult;
 
-use super::checked_index;
 use super::render::{
     InternalOccurrence, MarkdownModification, operation_events, plain_text, render_event_range,
     render_table_of_contents,
 };
+use super::{checked_count, checked_index};
 use crate::platform_error;
 
 #[derive(Clone)]
@@ -45,8 +45,8 @@ impl MarkdownDocument {
         }
     }
 
-    pub fn occurrence_count(&self) -> i32 {
-        self.state.borrow().occurrences.len() as i32
+    pub fn occurrence_count(&self) -> TsonicResult<i32> {
+        checked_count(self.state.borrow().occurrences.len())
     }
 
     pub fn occurrence(&self, index: i32) -> TsonicResult<MarkdownOccurrence> {
@@ -144,7 +144,7 @@ mod tests {
         MARKDOWN_PARSE_COUNT.with(|count| count.set(0));
         let document =
             MarkdownDocument::new("# Hello World\n\n[Docs](guide.md) and ![Logo](logo.png)");
-        assert_eq!(document.occurrence_count(), 3);
+        assert_eq!(document.occurrence_count().unwrap(), 3);
         let heading = document.occurrence(0).expect("heading occurrence");
         assert_eq!(heading.kind, "heading");
         assert_eq!(heading.anchor, "hello-world");
