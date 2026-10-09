@@ -1980,11 +1980,13 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 name = "tsonic_rust_js"
 version = "0.1.0"
 dependencies = [
+ "futures-util",
  "hashbrown 0.17.1",
  "num-bigint",
  "num-traits",
  "regress",
  "ryu-js",
+ "slab",
  "tinyvec",
  "tsonic_rust_runtime",
  "tz-rs",
@@ -2004,6 +2006,7 @@ dependencies = [
  "get_if_addrs",
  "glob",
  "hmac",
+ "httparse",
  "lazy_static",
  "libc",
  "md-5",
@@ -2020,6 +2023,7 @@ dependencies = [
  "sha1",
  "sha2",
  "signal-hook",
+ "socket2",
  "tsonic_rust_js",
  "tsonic_rust_runtime",
  "webpki-roots",
@@ -2031,6 +2035,7 @@ version = "0.1.0"
 dependencies = [
  "libm",
  "num-bigint",
+ "num-traits",
 ]
 
 [[package]]
