@@ -32,3 +32,5 @@ export function main(): void {
   completeTests(87);
   return;
 }
+
+main();

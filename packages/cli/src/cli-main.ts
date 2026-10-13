@@ -62,3 +62,5 @@ export function main(): void {
     process.exitCode = 1;
   }
 }
+
+main();
